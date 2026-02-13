@@ -15,26 +15,30 @@ struct WeatherCondition {
     let iconName: String  // Mantido para compatibilidade com SF Symbols
     let assetName: String // Nome do asset no Assets
     let description: String
+    let cardBackgroundName: String
     
     // Método para criar a partir de código numérico (mantido para compatibilidade)
     static func from(code: Int) -> WeatherCondition {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let isNight = hour >= 18 || hour < 6
+        
         switch code {
-        case 0:            return .init(iconName: "sun.max.fill", assetName: "icon_clima_ensolarado", description: "Céu limpo")
-        case 1,2,3:        return .init(iconName: "cloud.sun.fill", assetName: "icon_clima_parc_nublado", description: "Nublado")
-        case 45,48:        return .init(iconName: "cloud.fog.fill", assetName: "icon_clima_nublado", description: "Neblina")
-        case 51,53,55:     return .init(iconName: "cloud.drizzle.fill", assetName: "icon_clima_chuva_fraca", description: "Chuvisco")
-        case 61,63,65:     return .init(iconName: "cloud.rain.fill", assetName: "icon_clima_chuva", description: "Chuva")
-        case 71,73,75,77:  return .init(iconName: "cloud.snow.fill", assetName: "icon_clima_parc_nublado", description: "Neve")
-        case 80,81,82:     return .init(iconName: "cloud.heavyrain.fill", assetName: "icon_clima_chuva", description: "Chuva forte")
-        case 95,96,99:     return .init(iconName: "cloud.bolt.rain.fill", assetName: "icon_clima_tempestade", description: "Tempestade")
-        default:           return .init(iconName: "questionmark.circle", assetName: "icon_clima_nublado", description: "Desconhecido")
+        case 0:            return .init(iconName: "sun.max.fill", assetName: "ic_sunny", description: "Céu limpo", cardBackgroundName: isNight ? "bg_weather_card_clear_night" : "bg_weather_card_sunny")
+        case 1,2,3:        return .init(iconName: "cloud.sun.fill", assetName: "ic_partially_cloudy_day", description: "Nublado", cardBackgroundName: isNight ? "bg_weather_card_partially_cloudy_night" : "bg_weather_card_partially_cloudy_day")
+        case 45,48:        return .init(iconName: "cloud.fog.fill", assetName: "ic_cloudy", description: "Neblina", cardBackgroundName: "bg_weather_card_cloudy")
+        case 51,53,55:     return .init(iconName: "cloud.drizzle.fill", assetName: "ic_rain", description: "Chuvisco", cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
+        case 61,63,65:     return .init(iconName: "cloud.rain.fill", assetName: "ic_rain", description: "Chuva", cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
+        case 71,73,75,77:  return .init(iconName: "cloud.snow.fill", assetName: "ic_snow", description: "Neve", cardBackgroundName: "bg_weather_card_cloudy")
+        case 80,81,82:     return .init(iconName: "cloud.heavyrain.fill", assetName: "ic_rain", description: "Chuva forte", cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
+        case 95,96,99:     return .init(iconName: "cloud.bolt.rain.fill", assetName: "ic_storme", description: "Tempestade", cardBackgroundName: "bg_weather_card_cloudy")
+        default:           return .init(iconName: "questionmark.circle", assetName: "ic_cloudy", description: "Desconhecido", cardBackgroundName: "bg_weather_card_sunny")
         }
     }
     
     // Método para criar diretamente a partir do texto da API do Climatempo
     static func from(text: String?) -> WeatherCondition {
         guard let text = text?.lowercased() else {
-            return .init(iconName: "questionmark.circle", assetName: "icon_clima_nublado", description: "Desconhecido")
+            return .init(iconName: "questionmark.circle", assetName: "ic_cloudy", description: "Carregando...", cardBackgroundName: "card_view_weather_main")
         }
         
         let hour = Calendar.current.component(.hour, from: Date())
@@ -42,44 +46,28 @@ struct WeatherCondition {
         
         // Mapeia diretamente as condições da API do Climatempo para os assets
         if text.contains("tempestade") || text.contains("trovoada") {
-            if text.contains("chuva") {
-                return .init(iconName: "cloud.bolt.rain.fill", assetName: "icon_clima_tempestade", description: "Chuva com tempestade")
-            } else {
-                return .init(iconName: "cloud.bolt.rain.fill", assetName: "icon_clima_tempestade", description: "Tempestade")
-            }
-        } else if text.contains("chuva") && text.contains("sol") {
-            return .init(iconName: "cloud.sun.rain.fill", assetName: "icon_clima_chuva", description: "Chuva e sol")
+            return .init(iconName: "cloud.bolt.rain.fill", assetName: "ic_storme", description: text.capitalized, cardBackgroundName: "bg_weather_card_cloudy")
         } else if text.contains("chuva") {
-            if isNight {
-                return .init(iconName: "cloud.rain.fill", assetName: "icon_clima_chuva", description: "Chuva")
-            } else {
-                return .init(iconName: "cloud.rain.fill", assetName: "icon_clima_chuva", description: "Chuva")
+            if text.contains("sol") || text.contains("aberturas") {
+                return .init(iconName: "cloud.sun.rain.fill", assetName: "ic_rain", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
             }
-        } else if text.contains("sol") && text.contains("nuvens") {
-            return .init(iconName: "cloud.sun.fill", assetName: "icon_clima_parc_nublado", description: "Sol com nuvens")
-        } else if text.contains("sol") && !text.contains("nuvens") {
-            return .init(iconName: "sun.max.fill", assetName: "icon_clima_ensolarado", description: "Sol")
-        } else if text.contains("céu limpo") || text.contains("ceu limpo") {
-            if isNight {
-                return .init(iconName: "moon.fill", assetName: "icon_clima_ensolarado", description: "Céu limpo")
-            } else {
-                return .init(iconName: "sun.max.fill", assetName: "icon_clima_ensolarado", description: "Céu limpo")
+            return .init(iconName: "cloud.rain.fill", assetName: "ic_rain", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
+        } else if text.contains("sol") || text.contains("ensolarado") || text.contains("limpo") || text.contains("claro") || text.contains("aberturas") || text.contains("parcialmente") || text.contains("predominantemente") {
+            // Se tem qualquer menção a sol, aberturas, ou é apenas "parcialmente/predominantemente" nublado, usamos o fundo de sol com nuvens
+            if text.contains("nuvens") || text.contains("nublado") {
+                return .init(iconName: "cloud.sun.fill", assetName: isNight ? "ic_partially_cloudy_night" : "ic_partially_cloudy_day", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_partially_cloudy_night" : "bg_weather_card_partially_cloudy_day")
             }
+            return .init(iconName: isNight ? "moon.fill" : "sun.max.fill", assetName: isNight ? "ic_clear_night" : "ic_sunny", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_clear_night" : "bg_weather_card_sunny")
         } else if text.contains("nublado") || text.contains("nuvens") {
-            if isNight {
-                return .init(iconName: "cloud.fill", assetName: "icon_clima_parc_nublado", description: "Nublado")
-            } else {
-                return .init(iconName: "cloud.fill", assetName: "icon_clima_parc_nublado", description: "Nublado")
-            }
+            return .init(iconName: "cloud.fill", assetName: "ic_cloudy", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_cloudy_night" : "bg_weather_card_cloudy")
         } else if text.contains("chuvisco") || text.contains("garoa") {
-            return .init(iconName: "cloud.drizzle.fill", assetName: "icon_clima_chuva", description: "Chuvisco")
+            return .init(iconName: "cloud.drizzle.fill", assetName: "ic_rain", description: text.capitalized, cardBackgroundName: isNight ? "bg_weather_card_rainy_night" : "bg_weather_card_rainy_day")
         } else if text.contains("neblina") || text.contains("névoa") {
-            return .init(iconName: "cloud.fog.fill", assetName: "icon_clima_nublado", description: "Neblina")
+            return .init(iconName: "cloud.fog.fill", assetName: "ic_cloudy", description: text.capitalized, cardBackgroundName: "bg_weather_card_cloudy")
         } else if text.contains("neve") {
-            return .init(iconName: "cloud.snow.fill", assetName: "icon_clima_chuva", description: "Neve")
+            return .init(iconName: "cloud.snow.fill", assetName: "ic_snow", description: text.capitalized, cardBackgroundName: "bg_weather_card_cloudy")
         } else {
-            // Retorna a descrição original da API
-            return .init(iconName: "cloud.fill", assetName: "icon_clima_nublado", description: text.capitalized)
+            return .init(iconName: "cloud.fill", assetName: "ic_cloudy", description: text.capitalized, cardBackgroundName: "card_view_weather_main")
         }
     }
 }
@@ -191,6 +179,11 @@ final class WeatherService: ObservableObject {
     @Published var hourlyTemperatures: [(date: Date, temp: Int)] = [] // Dados para o gráfico
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    // Constant for fallback (Salvador, BA)
+    private let DEFAULT_LAT = -12.9714
+    private let DEFAULT_LON = -38.5014
+    private let DEFAULT_CITY = "Salvador" // Simplified for better matching
     
     // Publicados - Saúde e bem-estar (MS Health)
     @Published var mosquitoCondition: String?
@@ -355,17 +348,24 @@ final class WeatherService: ObservableObject {
         lastFetchAt = Date()
         lastFetchLocation = newLoc
         
+        // Epsilon comparison for doubles (Salvador coordinates)
+        let isDefaultLocation = abs(latitude - DEFAULT_LAT) < 0.001 && abs(longitude - DEFAULT_LON) < 0.001
         
         isLoading = true
         errorMessage = nil
-        daily.removeAll()
-        hourlyTemperatures.removeAll()
+        // daily.removeAll() // Don't remove old data to avoid flickering
+        // hourlyTemperatures.removeAll()
 
         do {
             // 0) Coordenadas e geocoder
             print("🌍 Coordenadas recebidas: lat=\(latitude), lon=\(longitude)")
-            let cityName = try await reverseGeocodeCity(latitude: latitude, longitude: longitude)
-            print("🏙 Cidade obtida do geocoder: \(cityName)")
+            let cityName: String
+            if isDefaultLocation {
+                cityName = DEFAULT_CITY
+            } else {
+                cityName = try await reverseGeocodeCity(latitude: latitude, longitude: longitude)
+            }
+            print("🏙 Cidade obtida: \(cityName)")
 
             // 1) Carrega lista de dias
             let indexURL = URL(string: "https://climatempo.ticketss.app/index.json")!
@@ -652,6 +652,14 @@ final class WeatherService: ObservableObject {
             return "\(city) - \(uf)"
         }
         return city
+    }
+
+    func fetchWeather(latitude: Double? = nil, longitude: Double? = nil, specificDay: String? = nil) {
+        let lat = latitude ?? DEFAULT_LAT
+        let lon = longitude ?? DEFAULT_LON
+        Task {
+            await loadByCoordinates(latitude: lat, longitude: lon, specificDay: specificDay)
+        }
     }
 
 

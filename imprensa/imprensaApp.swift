@@ -10,7 +10,7 @@ import GoogleCast
 
 
 class AppDelegate: NSObject, UIApplicationDelegate, GCKLoggerDelegate {
-    let kReceiverAppID = "AA997F6E" //TROCAR PELO PADRÃO APPRADIO
+    let kReceiverAppID = "AA997F6E" 
     let kDebugLoggingEnabled = true
     
   func application(_ application: UIApplication,
@@ -21,6 +21,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, GCKLoggerDelegate {
       GCKCastContext.setSharedInstanceWith(options)
       GCKLogger.sharedInstance().delegate = self
       return true
+  }
+
+  func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+      if UserDefaults.standard.bool(forKey: "rotationEnabled") {
+          return .allButUpsideDown
+      } else {
+          return .portrait
+      }
   }
 }
 

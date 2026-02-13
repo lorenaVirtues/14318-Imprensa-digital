@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B559FDE74169067A08B56A62 /* Pods_imprensa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9686099A31C0EBCB170FA58 /* Pods_imprensa.framework */; };
+		EE9A918D2F3FB3AB004CDB80 /* Shimmer in Frameworks */ = {isa = PBXBuildFile; productRef = EE9A918C2F3FB3AB004CDB80 /* Shimmer */; };
+		EEA450082F3E59A90002B9EC /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = EEA450072F3E59A90002B9EC /* Lottie */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,7 +45,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE9A918D2F3FB3AB004CDB80 /* Shimmer in Frameworks */,
 				B559FDE74169067A08B56A62 /* Pods_imprensa.framework in Frameworks */,
+				EEA450082F3E59A90002B9EC /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -135,6 +139,10 @@
 			);
 			mainGroup = EE2939642F3A3FE700344D7B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EEA450062F3E59A90002B9EC /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				EE9A918B2F3FB3AB004CDB80 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EE29396E2F3A3FE700344D7B /* Products */;
 			projectDirPath = "";
@@ -353,7 +361,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"imprensa/Preview Content\"";
-				DEVELOPMENT_TEAM = CFMATG4H4H;
+				DEVELOPMENT_TEAM = R6LD875UK5;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -375,7 +383,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.app.imprensa-dev";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -392,7 +400,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"imprensa/Preview Content\"";
-				DEVELOPMENT_TEAM = CFMATG4H4H;
+				DEVELOPMENT_TEAM = R6LD875UK5;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -414,7 +422,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.app.imprensa-dev";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -444,6 +452,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		EE9A918B2F3FB3AB004CDB80 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/markiv/SwiftUI-Shimmer";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.1;
+			};
+		};
+		EEA450062F3E59A90002B9EC /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EE9A918C2F3FB3AB004CDB80 /* Shimmer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EE9A918B2F3FB3AB004CDB80 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */;
+			productName = Shimmer;
+		};
+		EEA450072F3E59A90002B9EC /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EEA450062F3E59A90002B9EC /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EE2939652F3A3FE700344D7B /* Project object */;
 }

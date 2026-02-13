@@ -5,6 +5,11 @@ enum Route: Hashable {
     case home
     case menu
     case contato
+    case audio
+    case config
+    case clima
+    case playlist
+    case sobre
 }
 
 final class NavigationRouter: ObservableObject {

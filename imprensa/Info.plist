@@ -13,13 +13,31 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>radio953.ticketss.app</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<false/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_googlecast._tcp</string>
 		<string>_AA997F6E._googlecast._tcp</string>
+	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Spartan-Bold.ttf</string>
+		<string>Spartan-Regular.ttf</string>
+		<string>Spartan-SemiBold.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

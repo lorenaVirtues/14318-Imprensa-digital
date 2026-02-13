@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  imprensa
-//
-//  Created by Virtues25 on 09/02/26.
-//
-
 import SwiftUI
 import GoogleCast
 import StoreKit
@@ -12,7 +5,7 @@ import StoreKit
 import UIKit
 import AVKit
 
-
+private var reviewCountKey = "reviewRequestCount"
 
 struct ContentView: View {
     let castManager = CastManager.shared
@@ -22,18 +15,32 @@ struct ContentView: View {
     @StateObject private var monitor = Monitor()
     @State private var hasStarted = false
     @State private var showSobre = false
+    @State private var showTermos = false
+    @State private var showCompartilhar = false
     @State private var menuOffset: CGFloat = -UIScreen.main.bounds.width
     @State private var dataLoading = false
-    @State private var currentRadioId: String? = nil
+    @State private var currentRadioId: String? = nil // Rastreia qual rádio está tocando
+    @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var launchTracker: LaunchTracker
+    @EnvironmentObject private var locManager: LocationManager
+    @EnvironmentObject private var weatherSvc: WeatherService
+    @EnvironmentObject private var dateTimeSvc: DateTimeService
     @EnvironmentObject private var dataController: AppDataController
     @EnvironmentObject private var linkHandler: LinkHandler
     @EnvironmentObject private var radioPlayer: RadioPlayer
     @EnvironmentObject private var router: NavigationRouter
- //   @EnvironmentObject private var lottieCtrl: LottieControlCenter
+    @EnvironmentObject private var lottieCtrl: LottieControlCenter
+    
     var body: some View {
         GeometryReader{ geo in
             Color(.black).ignoresSafeArea()
+            let isPortrait = geo.size.height > geo.size.width
+            if isPortrait {
+                portrait(geo: geo)
+            } else {
+                landscape(geo: geo)
+            }
+            
             if dataController.isLoading {
                 LoaderView()
             } else if dataController.errorMessage != nil {
@@ -42,8 +49,19 @@ struct ContentView: View {
                 })
             }
             
+            
+            Group{
+                Button(action: {  }, label: {  }) .fullScreenCover(isPresented: $showCompartilhar) {
+                    if let urlString = dataController.appData?.app.share,
+                       let url = URL(string: urlString) {
+                        ActivityView(activityItems: [NSURL(string: urlString)!] as [Any], applicationActivities: nil)
+                    }
+                }
+            }
         }
         .onAppear  {
+            fetchIfPossible()
+            
             guard !launchTracker.didStartRadio,
                   UserDefaults.autoplayEnabled, // Valida autoplay antes de iniciar
                   let first = dataController.appData?.app.radios.first,
@@ -86,10 +104,58 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: locManager.lastLocation) { _ in fetchIfPossible() }
         .navigationTitle("Voltar")
         .navigationBarHidden(true)
     }
 
+    private func openAirPlay() {
+            print("🔵 Abrindo seletor de dispositivos (AirPlay/Bluetooth)...")
+
+            // Força a sessão de áudio para playback
+            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try? AVAudioSession.sharedInstance().setActive(true, options: [])
+
+            // Simula o toque no AVRoutePickerView
+            DispatchQueue.main.async {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    let routePicker = AVRoutePickerView()
+                    routePicker.prioritizesVideoDevices = false
+                    if #available(iOS 13.0, *) {
+                        routePicker.activeTintColor = .white
+                        routePicker.tintColor = .white
+                    }
+
+                    // Adiciona temporariamente à view
+                    window.addSubview(routePicker)
+                    routePicker.isHidden = true
+
+                    // Simula o toque
+                    for subview in routePicker.subviews {
+                        if let button = subview as? UIButton {
+                            button.sendActions(for: .touchUpInside)
+                            print("✅ Seletor de dispositivos aberto")
+                            break
+                        }
+                    }
+
+                    // Remove após um delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        routePicker.removeFromSuperview()
+                    }
+                }
+            }
+        }
+    private func fetchIfPossible() {
+        guard let loc = locManager.lastLocation else { return }
+        guard weatherSvc.shouldFetch(for: loc) else { return }
+
+        weatherSvc.fetchWeather(
+            latitude: loc.coordinate.latitude,
+            longitude: loc.coordinate.longitude
+        )
+    }
     func playToggle() {
             guard monitor.status == .connected else {
                 return
@@ -111,4 +177,22 @@ struct ContentView: View {
             }
         }
     
+    @ViewBuilder
+    private func portrait(geo: GeometryProxy) -> some View {
+        let h = geo.size.height
+        let w = geo.size.width
+        ZStack(alignment: .top){
+        }
+        .frame(width: w)
+    }
+    
+    @ViewBuilder
+    private func landscape(geo: GeometryProxy) -> some View {
+        let w = geo.size.width
+        let h = geo.size.height
+        ZStack{
+            
+        }
+    }
 }
+

@@ -7,6 +7,8 @@ enum SocialType {
     case facebook(profileId: String)
     case whatsapp(phone: String)
     case youtube(channelId: String)
+    case tiktok(username: String)
+    case twitter(username: String)
     case custom(urlString: String)
 }
 
@@ -27,7 +29,6 @@ final class LinkHandler: ObservableObject {
             let social = appInfo.social(rotulo: rotulo)
         else { return }
 
-        
         whatsappPhoneNumber = appInfo.social(rotulo: "whatsapp")?.link
         
         // 2) mapeia pro tipo correto
@@ -41,21 +42,17 @@ final class LinkHandler: ObservableObject {
             type = .whatsapp(phone: social.scheme)
         case "youtube":
             type = .youtube(channelId: social.scheme)
+        case "tiktok":
+            type = .tiktok(username: social.scheme)
+        case "twitter", "x":
+            type = .twitter(username: social.scheme)
         case "promocao":
-            // Para promoções, queremos que o link seja aberto no sheet
+            // Para promoções, queremos que o link seja aberto via WhatsApp
             type = .whatsapp(phone: social.scheme)
-        case "noticia":
-            // Para promoções, queremos que o link seja aberto no sheet
+        case "noticia", "anunciantes", "locutores":
+            // Para estes, queremos que o link seja aberto no sheet
             pendingURL = URL(string: social.link)
-            return  // Retorna aqui para evitar a abertura via scheme
-        case "anunciantes":
-            // Para promoções, queremos que o link seja aberto no sheet
-            pendingURL = URL(string: social.link)
-            return  // Retorna aqui para evitar a abertura via scheme
-        case "locutores":
-            // Para promoções, queremos que o link seja aberto no sheet
-            pendingURL = URL(string: social.link)
-            return  // Retorna aqui para evitar a abertura via scheme
+            return
         default:
             type = .custom(urlString: social.link)
         }
@@ -77,11 +74,9 @@ final class LinkHandler: ObservableObject {
         let (schemeURL, webURL): (URL?, URL?) = {
             switch type {
             case .instagram(let u):
-                // Instagram não suporta mensagens pré-preenchidas via URL
                 return (URL(string: "instagram://user?username=\(u)"),
                         URL(string: "https://www.instagram.com/\(u)"))
             case .facebook(let id):
-                // Facebook também não suporta mensagens diretas via URL
                 return (URL(string: "fb://profile/\(id)"),
                         URL(string: "https://www.facebook.com/\(id)"))
             case .whatsapp(let p):
@@ -89,9 +84,14 @@ final class LinkHandler: ObservableObject {
                 return (URL(string: "whatsapp://send?phone=\(p)\(messageParam)"),
                         URL(string: "https://api.whatsapp.com/send?phone=\(p)\(messageParam)"))
             case .youtube(let ch):
-                // YouTube não suporta mensagens via URL
                 return (URL(string: "youtube://channel/\(ch)"),
                         URL(string: "https://www.youtube.com/channel/\(ch)"))
+            case .tiktok(let u):
+                return (URL(string: "snssdk1128://user/profile/@\(u)"),
+                        URL(string: "https://www.tiktok.com/@\(u)"))
+            case .twitter(let u):
+                return (URL(string: "twitter://user?screen_name=\(u)"),
+                        URL(string: "https://x.com/\(u)"))
             case .custom(let s):
                 return (URL(string: s), URL(string: s))
             }
@@ -100,7 +100,8 @@ final class LinkHandler: ObservableObject {
         if let s = schemeURL, UIApplication.shared.canOpenURL(s) {
             UIApplication.shared.open(s)
         } else if let w = webURL {
-            pendingURL = w  // Abre o link de fallback no web
+            // Redes sociais redirecionam para FORA (Safari externo)
+            UIApplication.shared.open(w, options: [:], completionHandler: nil)
         }
     }
 }

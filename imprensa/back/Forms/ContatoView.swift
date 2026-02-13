@@ -1,51 +1,151 @@
 import SwiftUI
-import UIKit
- 
+
 struct ContatoView: View {
     @EnvironmentObject var router: NavigationRouter
     
-    // Campos do formulário
+    // Form fields
     @State private var nome     = ""
     @State private var email    = ""
     @State private var assunto  = ""
     @State private var mensagem = ""
-    @State private var telefone = ""
-    @State private var selectedDDI = DDIList.first!
-    @State private var shouldDismissOnAlert = false
-    // Foco dos campos
-    enum Field: Hashable { case nome, email, telefone, assunto, mensagem }
+    
+    // Focus management
+    enum Field: Hashable { case nome, email, assunto, mensagem }
     @FocusState private var focusedField: Field?
     
-    // Controle do alerta
+    // Alert control
     @State private var showAlert    = false
     @State private var alertMessage = ""
     @State private var alertType: AlertType = .warning
     @State private var errorField: Field? = nil
+    @State private var shouldDismissOnAlert = false
     
-    // Controle de carregamento
+    // Loading state
     @State private var isSending = false
     
     var body: some View {
+        Color("azulEscuro")
+            .edgesIgnoringSafeArea(.bottom)
         ZStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // layout
-                    header
-                    
-                    Divider()
-                    
-                    Group { campos }
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                    
-                    enviarButton
-                        .padding(16)
+            Color.white
+            
+            VStack(spacing: 0) {
+                // Header
+                headerView
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 25) {
+                        // Title / Subtitle
+                        VStack(spacing: 5) {
+                            Text("Tem um recado?")
+                                .font(.custom("Spartan-Bold", size: 18))
+                                .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                            
+                            Text("Preencha seus dados e manda pra gente!")
+                                .font(.custom("Spartan-Regular", size: 14))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.top, 20)
+                        
+                        // Fields Grid (Nome and Email in same row)
+                        VStack(spacing: 20) {
+                            HStack(spacing: 15) {
+                                formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
+                                formField(label: "E-mail:", icon: "at", placeholder: "Seu e-mail....", text: $email, field: .email, keyboard: .emailAddress)
+                            }
+                            
+                            formField(label: "Assunto:", icon: "magnifyingglass", placeholder: "Assunto da mensagem...", text: $assunto, field: .assunto)
+                            
+                            // Mensagem (Larger)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Mensagem:")
+                                    .font(.custom("Spartan-Bold", size: 16))
+                                    .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                
+                                ZStack(alignment: .topLeading) {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .stroke(Color.gray, lineWidth: 1)
+                                        .background(Color.white)
+                                    
+                                    HStack(alignment: .top, spacing: 5) {
+                                        Image(systemName: "envelope.fill")
+                                            .foregroundColor(.gray)
+                                            .font(.system(size: 14))
+                                            .padding(.top, 12)
+                                        
+                                        ZStack(alignment: .topLeading) {
+                                            if mensagem.isEmpty {
+                                                Text("Sua mensagem....")
+                                                    .foregroundColor(.gray.opacity(0.6))
+                                                    .font(.custom("Spartan-Regular", size: 14))
+                                                    .padding(.top, 10)
+                                            }
+                                            
+                                            TextEditor(text: $mensagem)
+                                                .font(.custom("Spartan-Regular", size: 14))
+                                                .focused($focusedField, equals: .mensagem)
+                                                .opacity(mensagem.isEmpty ? 0.85 : 1)
+                                                .frame(minHeight: 180)
+                                                .padding(.top, 2)
+                                        }
+                                    }
+                                    .padding(.horizontal, 10)
+                                }
+                                .frame(height: 200)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        
+                        // Enviar Button (Slanted style)
+                        HStack {
+                            Spacer()
+                            Button(action: submit) {
+                                HStack {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12))
+                                    Text("ENVIAR")
+                                        .font(.custom("Spartan-Bold", size: 18))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 30)
+                                .background(
+                                    ZStack {
+                                        // Simple slanted background
+                                        SlantedButtonShape()
+                                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                        
+                                        // Shadow
+                                        SlantedButtonShape()
+                                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.3))
+                                            .offset(x: 2, y: 3)
+                                            .zIndex(-1)
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        .padding(.bottom, 100)
+                    }
                 }
             }
-            .disabled(isSending)
-            .opacity(isSending ? 0.6 : 1)
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-            .toolbar { keyboardToolbar }
+            
+            // Bottom Left Back Button
+            VStack {
+                Spacer()
+                HStack {
+                    Button(action: {
+                        router.backTopLevel()
+                    }) {
+                        Image("btn_return")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100)
+                    }
+                    Spacer()
+                }
+            }
             
             if isSending {
                 Color.black.opacity(0.4).ignoresSafeArea()
@@ -55,7 +155,6 @@ struct ContatoView: View {
                     .cornerRadius(12)
             }
             
-            
             if showAlert {
                 Color.black.opacity(0.4).ignoresSafeArea()
                 AlertaView(
@@ -63,228 +162,90 @@ struct ContatoView: View {
                     alertType: alertType
                 ) {
                     withAnimation { showAlert = false }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        if shouldDismissOnAlert {
-                            shouldDismissOnAlert = false
-                            router.go(to: .home)
-                        } else {
-                            focusedField = errorField
-                        }
+                    if shouldDismissOnAlert {
+                        router.backTopLevel()
                     }
                 }
                 .zIndex(1)
             }
         }
-        .navigationBarTitle("", displayMode: .inline)
         .navigationBarHidden(true)
+        .preferredColorScheme(.light)
     }
     
-    private var header: some View {
-        HStack {
-            Button { router.go(to: .home) } label: {
-                Image(systemName: "chevron.left").font(.title2)
+    // MARK: - Components
+    
+    private var headerView: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                // Title
+               Image("bg_header_title_contact")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 160)
+                    .padding(.leading)
+                
+                Spacer()
+                
+                HeaderDateTimeView()
+                    .padding(.trailing, 20)
             }
-            Spacer()
-            Text("Contato")
-                .font(.title2).bold()
-            Spacer()
-            Color.clear.frame(width: 24, height: 24)
+            .padding(.top, 40)
+            .padding(.bottom, 15)
+            
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(height: 1)
+                .padding(.horizontal, 20)
+                .padding(.top, 5)
         }
-        .padding()
-        .background(Color(UIColor.systemBackground))
     }
     
     @ViewBuilder
-    private var campos: some View {
-        campo(icon: "person.fill", placeholder: "Nome",    text: $nome,     field: .nome)
-        campo(icon: "envelope.fill", placeholder: "E-mail", text: $email,    field: .email, keyboard: .emailAddress)
-        campo(icon: "bookmark.fill", placeholder: "Assunto", text: $assunto,  field: .assunto)
-        
-        campoTelefone
-        
-        VStack(alignment: .leading) {
+    private func formField(label: String, icon: String, placeholder: String, text: Binding<String>, field: Field, keyboard: UIKeyboardType = .default) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label)
+                .font(.custom("Spartan-Bold", size: 16))
+                .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+            
             HStack {
-                Image(systemName: "text.bubble.fill")
-                Text("Mensagem").foregroundColor(.secondary)
+                Image(systemName: icon)
+                    .foregroundColor(.gray)
+                    .font(.system(size: 14))
+                
+                TextField(placeholder, text: text)
+                    .font(.custom("Spartan-Regular", size: 14))
+                    .keyboardType(keyboard)
+                    .focused($focusedField, equals: field)
+                    .autocapitalization(field == .email ? .none : .words)
             }
-            TextEditor(text: $mensagem)
-                .frame(minHeight: 120)
-                .disableAutocorrection(true)
-                .focused($focusedField, equals: .mensagem)
-        }
-        .padding()
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(8)
-    }
-    
-    private func campo(icon: String,
-                       placeholder: String,
-                       text: Binding<String>,
-                       field: Field,
-                       keyboard: UIKeyboardType = .default) -> some View
-    {
-        HStack {
-            Image(systemName: icon)
-            TextField(placeholder, text: text)
-                .keyboardType(keyboard)
-                .autocapitalization(field == .email ? .none : .words)
-                .disableAutocorrection(true)
-                .focused($focusedField, equals: field)
-                .submitLabel(.next)
-                .onSubmit { vaiParaProximo() }
-        }
-        .padding()
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(8)
-    }
-    @ViewBuilder
-    private var campoTelefone: some View {
-            HStack {
-                Image(systemName: "phone.fill")
-
-                Menu {
-                    ForEach(DDIList) { info in
-                        Button {
-                            selectedDDI = info
-                            telefone = ""
-                        } label: {
-                            Text("\(info.flag) \(info.code)")
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(selectedDDI.flag)
-                        Text(selectedDDI.code)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 6)
-                    .background(Color(UIColor.tertiarySystemBackground))
-                    .cornerRadius(6)
-                }
-
-                TextField(selectedDDI.placeholder, text: $telefone)
-                    .keyboardType(.numberPad)
-                    .disableAutocorrection(true)
-                    .focused($focusedField, equals: .telefone)
-                    .submitLabel(.next)
-                    .onChange(of: telefone) { new in
-                        telefone = applyMask(new, mask: selectedDDI.placeholder)
-                    }
-                    .onSubmit { vaiParaProximo() }
-            }
-            .padding()
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(8)
-        }
-
-
-    private var enviarButton: some View {
-        Button(action: submit) {
-            Text("Enviar")
-                .bold()
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.accentColor)
-                .foregroundColor(.white)
-                .cornerRadius(8)
+            .padding(.horizontal, 10)
+            .frame(height: 45)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(Color.gray, lineWidth: 1)
+                    .background(Color.white)
+            )
         }
     }
     
-    private var keyboardToolbar: some ToolbarContent {
-            ToolbarItemGroup(placement: .keyboard) {
-                Button("Fechar") { focusedField = nil }
-                Spacer()
-                Text(currentText)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 200)
-                Spacer()
-                Button("Próximo") { vaiParaProximo() }
-            }
-        }
-    
-    private var currentText: String {
-        switch focusedField {
-        case .nome:     return nome
-        case .email:    return email
-        case .assunto:  return assunto
-        case .telefone: return telefone
-        case .mensagem: return mensagem
-        default:        return ""
-        }
-    }
-
-    private func vaiParaProximo() {
-        switch focusedField {
-        case .nome:     focusedField = .email
-        case .email:    focusedField = .assunto
-        case .assunto:  focusedField = .telefone
-        case .telefone: focusedField = .mensagem
-        default:        focusedField = nil
-        }
-    }
+    // MARK: - Logic
     
     private func submit() {
         focusedField = nil
-
-        if nome.trimmingCharacters(in: .whitespaces).isEmpty {
-            show(cause: "Por favor, informe o nome.", type: .warning, focus: .nome)
-        }
-        else if !email.contains("@") || email.count < 5 {
-            show(cause: "Digite um e-mail válido.", type: .warning, focus: .email)
-        }
-        else if assunto.trimmingCharacters(in: .whitespaces).isEmpty {
-            show(cause: "Por favor, informe o assunto.", type: .warning, focus: .assunto)
-        }
-        else if selectedDDI.code.isEmpty {
-            show(cause: "Por favor, selecione o DDI.", type: .warning, focus: .telefone)
-        }
-        else if telefone.trimmingCharacters(in: .whitespaces).isEmpty {
-            show(cause: "Por favor, informe o telefone.", type: .warning, focus: .telefone)
-        }
-        else if mensagem.trimmingCharacters(in: .whitespaces).isEmpty {
-                show(cause: "Por favor, escreva a mensagem.", type: .warning, focus: .mensagem)
-        }
-        else {
-            let digits = telefone.filter { $0.isNumber }
-            let validLens = requiredLengths(for: selectedDDI)
-
-            if !validLens.contains(digits.count) {
-                if selectedDDI.code == "+55" {
-                    show(
-                        cause: "Telefone incompleto. Use (00) 0000-0000 (fixo) ou (00) 00000-0000 (celular).",
-                        type: .warning,
-                        focus: .telefone
-                    )
-                } else {
-                    let required = validLens.first ?? 0
-                    show(
-                        cause: "Telefone incompleto. Use o formato \(selectedDDI.placeholder).",
-                        type: .warning,
-                        focus: .telefone
-                    )
-                }
-                return
-            }
+        
+        if nome.isEmpty {
+            show(cause: "Informe seu nome.", type: .warning, focus: .nome)
+        } else if email.isEmpty || !email.contains("@") {
+            show(cause: "Informe um e-mail válido.", type: .warning, focus: .email)
+        } else if assunto.isEmpty {
+            show(cause: "Informe o assunto.", type: .warning, focus: .assunto)
+        } else if mensagem.isEmpty {
+            show(cause: "Escreva sua mensagem.", type: .warning, focus: .mensagem)
+        } else {
             sendContact()
         }
-
     }
-    
-    private func requiredLengths(for ddi: DDIInfo) -> Set<Int> {
-        if ddi.code == "+55" {
-            // Brasil: aceita Fixo (10) e Celular (11)
-            return [10, 11]
-        } else {
-            // Conta a quantidade de zeros no placeholder como comprimento esperado
-            let len = ddi.placeholder.filter { $0 == "0" }.count
-            return [len]
-        }
-    }
-
     
     private func show(cause: String, type: AlertType, focus: Field?) {
         alertMessage = cause
@@ -296,110 +257,48 @@ struct ContatoView: View {
     private func sendContact() {
         isSending = true
         
-        
         let radio        = "11069"
         let bundleId     = "14318"
         let sistema      = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
-        let dispositivo  = UIDevice.current.type.rawValue
-        
-        let ddiDigits   = selectedDDI.code.filter { $0.isNumber }
-        let phoneDigits = telefone.filter { $0.isNumber }
-        let fullPhone   = ddiDigits + phoneDigits
         
         DeviceModelResolver.shared.resolveModelName { resolvedModel in
             let dispositivo = resolvedModel
             
-            var paramString = """
-            radio=\(radio)&nome=\(nome)&email=\(email)&assunto=\(assunto)&mensagem=\(mensagem)&cliente=\(bundleId)&sistema=\(sistema)&dispositivo=\(dispositivo)
-            """
+            let paramString = "radio=\(radio)&nome=\(nome)&email=\(email)&assunto=\(assunto)&mensagem=\(mensagem)&cliente=\(bundleId)&sistema=\(sistema)&dispositivo=\(dispositivo)"
             
-            paramString = paramString
-                .replacingOccurrences(of: "\n", with: "")
-                .replacingOccurrences(of: "\r", with: "")
-                .replacingOccurrences(of: "\t", with: "")
+            guard let url = URL(string: "https://www.virtueslab.app/contato_radio_salvar.php") else { return }
             
-            let encoded = paramString
-                .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? paramString
-            
-            guard let url = URL(string: "https://www.virtueslab.app/contato_radio_salvar.php") else {
-                return finishSending(success: false, message: "URL inválida.")
-            }
-            var request = URLRequest(url: url, timeoutInterval: 15)
+            var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-            request.httpBody = Data(encoded.utf8)
+            request.httpBody = paramString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?.data(using: .utf8)
             
-            URLSession.shared.dataTask(with: request) { data, resp, error in
-                DispatchQueue.main.async { isSending = false }
-                
-                if let err = error {
-                    return finishSending(success: false, message: "Erro na conexão: \(err.localizedDescription)")
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    isSending = false
+                    if let _ = error {
+                        show(cause: "Erro de conexão", type: .error, focus: nil)
+                    } else {
+                        shouldDismissOnAlert = true
+                        show(cause: "Mensagem enviada com sucesso!", type: .success, focus: nil)
+                    }
                 }
-                guard let http = resp as? HTTPURLResponse else {
-                    return finishSending(success: false, message: "Resposta inválida do servidor.")
-                }
-                
-                print("📬 Status code: \(http.statusCode)")
-                if let d = data, let s = String(data: d, encoding: .utf8) {
-                    print("📨 Body: \(s)")
-                }
-                
-                if http.statusCode == 200 {
-                    finishSending(success: true, message: "Enviado com sucesso!")
-                } else {
-                    finishSending(success: false, message: "Erro no servidor: \(http.statusCode)")
-                }
-            }
-            .resume()
-        }
-        
-        
-        func finishSending(success: Bool, message: String) {
-            DispatchQueue.main.async {
-                shouldDismissOnAlert = success
-
-                show(cause: message,
-                     type: success ? .success : .error,
-                     focus: success ? nil : errorField)
-
-                if success {
-                    nome = ""; email = ""; assunto = ""; mensagem = ""; telefone = ""
-                }
-            }
+            }.resume()
         }
     }
-    
-    private func applyMask(_ string: String, mask: String) -> String {
-        let digits = string.filter { $0.isNumber }
-        var result = ""
-        var index = digits.startIndex
-        
-        if selectedDDI.code == "+55" {
-            let isMobile = digits.count > 10
-            let finalMask = isMobile ? "(00) 00000-0000" : "(00) 0000-0000"
+}
 
-            for ch in finalMask {
-                guard index < digits.endIndex else { break }
-                if ch == "0" {
-                    result.append(digits[index])
-                    index = digits.index(after: index)
-                } else {
-                    result.append(ch)
-                }
-            }
-        } else {
-            for ch in mask {
-                guard index < digits.endIndex else { break }
-                if ch == "0" {
-                    result.append(digits[index])
-                    index = digits.index(after: index)
-                } else {
-                    result.append(ch)
-                }
-            }
-        }
-        
-        return result
+// MARK: - Helper Shapes
+
+struct SlantedButtonShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let slant: CGFloat = 10
+        path.move(to: CGPoint(x: slant, y: 0))
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        path.addLine(to: CGPoint(x: rect.width - slant, y: rect.height))
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        path.closeSubpath()
+        return path
     }
-
 }

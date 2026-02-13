@@ -42,6 +42,12 @@ class AppDataController: NSObject, ObservableObject {
     @Published var appData: AppData?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var lottieControl: LottieControlCenter?
+    @Published var minimalMode = false {
+        didSet {
+            lottieControl?.pauseAll = minimalMode
+        }
+    }
 
      func parseAppData() {
          let urlServidor: String = "https://devapi.virtueslab.app"

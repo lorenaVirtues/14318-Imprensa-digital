@@ -9,8 +9,14 @@ struct AppRoot: View {
     @StateObject private var router = NavigationRouter()
     @StateObject private var dataController = AppDataController()
     @StateObject private var linkHandler = LinkHandler.shared
-   // @StateObject private var lottieCtrl = LottieControlCenter()
+    @StateObject private var lottieCtrl = LottieControlCenter()
     @StateObject private var castSession = CastSessionManager.shared
+    @StateObject private var locManager = LocationManager()
+    @StateObject private var weatherSvc = WeatherService()
+    @StateObject private var playlistManager = PlaylistManager()
+    @StateObject private var monitor = Monitor()
+    @StateObject private var recognitionService = NowPlayingRecognitionService()
+    @StateObject private var ytPlayer = YouTubeBackgroundPlayer.shared
     @State private var didParse   = false
     @State private var timerDone  = false
     @State var radio: RadioModel
@@ -26,21 +32,40 @@ struct AppRoot: View {
                         .transition(.opacity)     // fade-in/out
                 case .home:
                     PrincipalView(radio: radio)
-                        .transition(.move(edge: .trailing))
                         .environmentObject(radioPlayer)
                         .environmentObject(dataController)
                 case .menu:
-                    MenuView(onClose: {},
-                             onContato: {},
-                             onSite: {},
-                             onFacebook: {},
-                             onInstagram: {},
-                             onWhatsapp: {},
-                             onAvaliar: {},
-                             onCompartilhar: {},
-                             onTermos: {})
+                    MenuView()
+                        .environmentObject(radioPlayer)
+                        .environmentObject(dataController)
                 case .contato:
                     ContatoView()
+                case .audio:
+                    AudioView()
+                        .environmentObject(radioPlayer)
+                        .environmentObject(dataController)
+                case .config:
+                    ConfigView()
+                        .environmentObject(radioPlayer)
+                        .environmentObject(dataController)
+                case .clima:
+                    ClimaView()
+                        .environmentObject(dataController)
+                case .playlist:
+                    PlaylistView()
+                        .environmentObject(dataController)
+                case .sobre:
+                    SobreView()
+                        .environmentObject(dataController)
+                }
+                
+                // Error Overlay
+                if let error = dataController.errorMessage {
+                    ErrorView(onReconnect: {
+                        dataController.parseAppData()
+                    }, errorMessage: error)
+                    .transition(.opacity)
+                    .zIndex(10)
                 }
             }
             .sheet(item: $linkHandler.pendingURL) { url in
@@ -55,9 +80,17 @@ struct AppRoot: View {
         .environmentObject(router)
         .environmentObject(launchTracker)
         .environmentObject(radioPlayer)
-        //.environmentObject(lottieCtrl)
+        .environmentObject(lottieCtrl)
         .environmentObject(castSession)
+        .environmentObject(locManager)
+        .environmentObject(weatherSvc)
+        .environmentObject(playlistManager)
+        .environmentObject(recognitionService)
+        .environmentObject(ytPlayer)
         .onAppear {
+                    recognitionService.attach(radioPlayer: radioPlayer)
+                    recognitionService.start()
+                    dataController.lottieControl = lottieCtrl
                     dataController.parseAppData()
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
@@ -75,7 +108,20 @@ struct AppRoot: View {
             didParse = true
             tryAdvance()
         }
-        
+        .onReceive(monitor.$status) { status in
+            switch status {
+            case .desconnected:
+                if !dataController.isLoading {
+                    dataController.errorMessage = "Sem conexão com a Internet"
+                }
+            case .connected:
+                if dataController.appData == nil {
+                    dataController.parseAppData()
+                } else if dataController.errorMessage == "Sem conexão com a Internet" {
+                    dataController.errorMessage = nil
+                }
+            }
+        }
     }
     private func tryAdvance() {
             guard didParse, timerDone, router.currentRoute == .splash else { return }

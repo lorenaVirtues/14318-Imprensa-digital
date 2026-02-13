@@ -47,7 +47,7 @@ class Banner: NSObject, ObservableObject, WKNavigationDelegate {
     @Published var isLoading: Bool = true  // Flag para controlar o estado de carregamento
     
     init(radio: String) {
-        self.radio = radio.isEmpty ? "10223" : radio
+        self.radio = radio.isEmpty ? "11069" : radio
         
         // Configuração do dispositivo e montagem da URL
         let deviceType = UIDevice.current.type.rawValue

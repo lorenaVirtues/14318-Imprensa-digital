@@ -50,17 +50,24 @@ struct ItunesTrack: Codable {
 class RadioPlayer: NSObject, ObservableObject {
     @Published var itemArtist: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Radio Eldorado BA"
     @Published var itemMusic: String = "Há mais de 7 anos no ar!"
-    @Published var albumArtwork: UIImage? = nil
-    @Published var isPlaying: Bool = false
-    @Published var isLoading: Bool = true
+    @Published var albumArtwork: UIImage? = UIImage(named: "live") 
+    @Published private(set) var isPlaying: Bool = false
+    @Published var isLoading: Bool = false
     @Published var currentRadio: RadioModel? = nil
     @Published var showAlertConnect: Bool = false
     @Published var isConnected: Bool = true
+    @Published var currentArtworkUrl: String? = nil
+    @Published var volume: Float = 1.0 {
+        didSet {
+            player?.volume = volume
+        }
+    }
     
     let streamingURL: URL
     var player: AVPlayer?
     private var playerItem: AVPlayerItem?
     private var playerItemContext = 0
+    private var observedPlayer: AVPlayer?
     
     let artwork = MPMediaItemArtwork(boundsSize: CGSize(width: 512.0, height: 512.0)) { size in
         let image = UIImage(imageLiteralResourceName: "live")
@@ -80,6 +87,18 @@ class RadioPlayer: NSObject, ObservableObject {
         let metaOutput = AVPlayerItemMetadataOutput(identifiers: nil)
         metaOutput.setDelegate(self, queue: DispatchQueue.main)
         self.playerItem?.add(metaOutput)
+        
+        // Adiciona observador inicial
+        self.player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: &playerItemContext)
+        self.observedPlayer = self.player
+    }
+    
+    deinit {
+        if let p = observedPlayer {
+            p.removeObserver(self, forKeyPath: "timeControlStatus", context: &playerItemContext)
+        }
+        NotificationCenter.default.removeObserver(self)
+        NetworkReachability.shared.reachabilityObserver = nil
     }
 
     /// Cria um AVPlayerItem com o User-Agent personalizado
@@ -102,7 +121,11 @@ class RadioPlayer: NSObject, ObservableObject {
     }
     
     func initPlayer(url: URL) {
-        self.isPlaying = false
+        // Se já temos um player com essa URL e ele está tocando, não reinicia
+        if let currentURL = (player?.currentItem?.asset as? AVURLAsset)?.url, currentURL == url {
+            if player?.timeControlStatus == .playing { return }
+        }
+
         self.isLoading = true
                 
         playerItem = RadioPlayer.makePlayerItem(with: url)
@@ -111,11 +134,19 @@ class RadioPlayer: NSObject, ObservableObject {
         metaOutput.setDelegate(self, queue: DispatchQueue.main)
         playerItem?.add(metaOutput)
         
+        // Remove observador antigo se existir de forma segura
+        if let oldPlayer = observedPlayer {
+            oldPlayer.removeObserver(self, forKeyPath: "timeControlStatus", context: &playerItemContext)
+            observedPlayer = nil
+        }
+        
         player = AVPlayer(playerItem: playerItem)
         player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: &playerItemContext)
+        observedPlayer = player
         setupNotifications()
         setupNowPlayingInfo(with: artwork)
         reachabilityObserver()
+        setDefaultAlbumArtwork()
     }
     
     /// Observa as mudanças no status do player (tocar/loading)
@@ -128,12 +159,18 @@ class RadioPlayer: NSObject, ObservableObject {
             return
         }
         DispatchQueue.main.async {
-            if self.player?.timeControlStatus == .playing {
+            switch self.player?.timeControlStatus {
+            case .playing:
                 self.isPlaying = true
-                self.isLoading = false // Finaliza o loading quando começa a tocar
-            } else if self.player?.timeControlStatus == .waitingToPlayAtSpecifiedRate {
+                self.isLoading = false
+            case .waitingToPlayAtSpecifiedRate:
                 self.isPlaying = false
-                self.isLoading = true // Exibe o loading enquanto espera
+                self.isLoading = true
+            case .paused:
+                self.isPlaying = false
+                self.isLoading = false
+            default:
+                break
             }
         }
     }
@@ -144,6 +181,17 @@ class RadioPlayer: NSObject, ObservableObject {
                                                selector: #selector(handleInterruption),
                                                name: AVAudioSession.interruptionNotification,
                                                object: nil)
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(handleStopRequest),
+                                               name: .appShouldStopRadio,
+                                               object: nil)
+    }
+
+    @objc private func handleStopRequest() {
+        DispatchQueue.main.async {
+            self.stop()
+            self.isPlaying = false
+        }
     }
     
     @objc func handleInterruption(notification: Notification) {
@@ -201,16 +249,14 @@ class RadioPlayer: NSObject, ObservableObject {
     
     func playToggle(with radio: RadioModel) {
         if self.isConnected {
-            self.isPlaying.toggle()
             if self.isPlaying {
-                self.isLoading = false
+                stop()
+            } else {
                 self.currentRadio = radio
                 if let url = URL(string: radio.streamUrl) {
                     initPlayer(url: url)
                     play(radio)
                 }
-            } else {
-                stop()
             }
         } else {
             self.showAlertConnect = true
@@ -218,8 +264,9 @@ class RadioPlayer: NSObject, ObservableObject {
     }
     
     func play(_ radio: RadioModel) {
+        NotificationCenter.default.post(name: .appShouldStopExternalPlayer, object: nil)
         currentRadio = radio
-        player?.volume = 1.0
+        player?.volume = self.volume
         isLoading = true
         player?.play()
         playAudioBackground()
@@ -228,6 +275,8 @@ class RadioPlayer: NSObject, ObservableObject {
     
     func stop() {
         player?.pause()
+        self.isPlaying = false
+        self.isLoading = false
     }
     
     /// Altera o volume (aumenta ou diminui) com um passo definido e fornece feedback háptico.
@@ -287,6 +336,9 @@ class RadioPlayer: NSObject, ObservableObject {
                 let result = try JSONDecoder().decode(ItunesSearchResponse.self, from: data)
                 if let artworkUrlString = result.results.first?.artworkUrl100 {
                     let highResUrl = artworkUrlString.replacingOccurrences(of: "100x100", with: "512x512")
+                    DispatchQueue.main.async {
+                        self.currentArtworkUrl = highResUrl
+                    }
                     self.downloadAlbumArtwork(from: highResUrl)
                 } else {
                     print("Nenhuma capa encontrada")
@@ -325,7 +377,7 @@ class RadioPlayer: NSObject, ObservableObject {
 
     private func setDefaultAlbumArtwork() {
         DispatchQueue.main.async {
-            self.albumArtwork = UIImage(named: "mascara_album")
+            self.albumArtwork = UIImage(named: "live")
         }
     }
 
