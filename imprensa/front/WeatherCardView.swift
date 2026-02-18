@@ -11,8 +11,8 @@ struct WeatherCardView: View {
             Image(weatherSvc.condition?.cardBackgroundName ?? "card_view_weather_main")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: width, height: height, alignment: .top)
-                .clipped()
+                .frame(width: width * 0.8, height: height * 0.9, alignment: .top)
+                .border(Color.red)
             
             // Content Overlay
             HStack {
@@ -86,9 +86,9 @@ struct WeatherCardView: View {
                     .foregroundColor(.white)
                     .padding(.top, 5)
                 }
-                .padding(.leading, 15) // Adjusted to align inside the blue part
-                .padding(.top, 3)
-                
+                .padding(.leading, 40) // Adjusted to align inside the blue part
+                .padding(.top, 25)
+                .frame(width: width * 0.45, height: height * 0.5)
                 Spacer()
             }
         }

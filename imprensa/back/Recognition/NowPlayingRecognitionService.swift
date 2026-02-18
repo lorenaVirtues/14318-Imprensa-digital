@@ -16,8 +16,10 @@ final class NowPlayingRecognitionService: ObservableObject {
 
     private weak var radioPlayer: RadioPlayer?
     private var loopTask: Task<Void, Never>?
+    private let shazamKit = ShazamKitManager()
     private var backoffSeconds: TimeInterval = 0
     private var lastAppliedKey: String? = nil
+    private var lastURL: URL? = nil
 
     // Placeholders “originais” do app (antes do reconhecimento via Shazam).
     private let placeholderArtist = "Tocando agora"
@@ -52,8 +54,17 @@ final class NowPlayingRecognitionService: ObservableObject {
             guard rp.isPlaying else { continue }
             if isRecognizing { continue }
 
-            // Respeita intervalos + backoff
+            // Respeita intervalos + backoff (a menos que a rádio tenha mudado)
             let now = Date()
+            let currentURL = URL(string: rp.currentRadio?.streamUrl ?? "")
+            
+            if currentURL != lastURL {
+                // Radio mudou, reseta o timer para identificar logo
+                lastSuccessAt = nil
+                lastURL = currentURL
+                print("[NowPlayingRecognitionService] Radio station changed, resetting recognition timer")
+            }
+
             if let last = lastSuccessAt, now.timeIntervalSince(last) < minIntervalSeconds {
                 continue
             }
@@ -69,7 +80,7 @@ final class NowPlayingRecognitionService: ObservableObject {
         guard let rp = radioPlayer else { return }
 
         // Pega o stream atual
-        guard let streamString = rp.currentRadio?.streamUrl.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let streamString = rp.currentRadio?.streamUrl.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines),
               let streamURL = URL(string: streamString) else {
             return
         }
@@ -89,48 +100,61 @@ final class NowPlayingRecognitionService: ObservableObject {
                 userAgent: ua
             )
 
-            // 1) tenta normalizar (WAV/M4A). Se falhar, tenta enviar o raw mesmo (AAC/TS).
+            // 1) Normaliza para WAV (Obrigatório para o ShazamKit ler o buffer PCM)
             let uploadURL: URL
             do {
                 uploadURL = try await AudioNormalizer.normalizeToWavIfPossible(inputURL: snippet.fileURL)
             } catch {
-                print("[Recognizer] normalize failed, uploading raw snippet: \(error.localizedDescription)")
-                uploadURL = snippet.fileURL
-            }
-
-            let result = try await ShazamAPIClient.recognize(audioFileURL: uploadURL)
-            lastSuccessAt = Date()
-            lastTitle = result.title
-            lastArtist = result.artist
-            backoffSeconds = 0
-
-            print("[Recognizer] ✅ recognized artist=\(result.artist) title=\(result.title) total=\(String(format: "%.2f", Date().timeIntervalSince(start)))s")
-
-            // Atualiza metadados do player para a UI (somente se mudou)
-            let newKey = "\(result.artist.lowercased())|\(result.title.lowercased())"
-            if lastAppliedKey != newKey {
-                lastAppliedKey = newKey
-                rp.itemArtist = result.artist
-                rp.itemMusic = result.title
-                rp.updateAlbumArtwork(from: result.artist, track: result.title)
-            }
-        } catch {
-            lastFailureAt = Date()
-
-            // Se foi "sem match", não faz backoff exponencial. Respeita retryms do Shazam (normalmente 7000ms).
-            if case ShazamAPIClient.ClientError.noMatch(let retryMs) = error {
-                let retrySeconds = max(5, TimeInterval((retryMs ?? 7000)) / 1000.0)
-                backoffSeconds = retrySeconds
-                lastError = "Sem correspondência (tentando novamente em \(Int(ceil(retrySeconds)))s)"
-                print("[Recognizer] ⚠️ no match, retry in \(Int(ceil(retrySeconds)))s")
+                print("[Recognizer] normalize failed, cannot use ShazamKit: \(error.localizedDescription)")
+                // Tenta fallback para a API antiga com o arquivo bruto se possível
+                try await fallbackRecognition(fileURL: snippet.fileURL, rp: rp, start: start)
                 return
             }
 
-            lastError = error.localizedDescription
-            // backoff simples progressivo para falhas reais (rede/parse/etc)
-            backoffSeconds = min(max(backoffSeconds * 2, 60), 10 * 60)
-            print("[Recognizer] ❌ failed: \(error.localizedDescription) backoff=\(backoffSeconds)s")
+            // 2) Tenta via ShazamKit (Oficial Apple)
+            do {
+                let result = try await shazamKit.recognize(audioURL: uploadURL)
+                applyResult(title: result.title, artist: result.artist, source: .shazam, rp: rp, start: start)
+            } catch {
+                print("[Recognizer] ShazamKit failed: \(error.localizedDescription). Trying fallback API...")
+                // 3) Fallback para a API customizada se o ShazamKit falhar
+                try await fallbackRecognition(fileURL: uploadURL, rp: rp, start: start)
+            }
+            
+        } catch {
+            handleError(error)
         }
+    }
+    
+    private func fallbackRecognition(fileURL: URL, rp: RadioPlayer, start: Date) async throws {
+        let result = try await ShazamAPIClient.recognize(audioFileURL: fileURL)
+        applyResult(title: result.title, artist: result.artist, source: .shazam, rp: rp, start: start)
+    }
+    
+    private func applyResult(title: String, artist: String, source: RadioPlayer.MetadataSource, rp: RadioPlayer, start: Date) {
+        lastSuccessAt = Date()
+        lastTitle = title
+        lastArtist = artist
+        backoffSeconds = 0
+        
+        print("[Recognizer] ✅ identified=\(artist) - \(title) time=\(String(format: "%.2f", Date().timeIntervalSince(start)))s")
+        rp.updateMetadata(artist: artist, music: title, source: source)
+    }
+    
+    private func handleError(_ error: Error) {
+        lastFailureAt = Date()
+        
+        if case ShazamAPIClient.ClientError.noMatch(let retryMs) = error {
+            let retrySeconds = max(5, TimeInterval((retryMs ?? 7000)) / 1000.0)
+            backoffSeconds = retrySeconds
+            lastError = "Sem correspondência"
+            print("[Recognizer] ⚠️ no match, retry in \(Int(ceil(retrySeconds)))s")
+            return
+        }
+        
+        lastError = error.localizedDescription
+        backoffSeconds = min(max(backoffSeconds * 2, 60), 10 * 60)
+        print("[Recognizer] ❌ failed: \(error.localizedDescription) backoff=\(backoffSeconds)s")
     }
 }
 

@@ -30,9 +30,29 @@ class PlaylistManager: ObservableObject {
         playlists.removeAll { $0.id == id }
     }
     
-    func updatePlaylist(id: UUID, name: String) {
+    func updatePlaylist(id: UUID, name: String, imageUrl: String? = nil) {
         if let index = playlists.firstIndex(where: { $0.id == id }) {
             playlists[index].name = name
+            if let img = imageUrl {
+                playlists[index].imageUrl = img
+            }
+        }
+    }
+    
+    func saveImageToDisk(image: UIImage) -> String? {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return nil }
+        let fileName = "playlist_\(UUID().uuidString).jpg"
+        let fileManager = FileManager.default
+        
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let fileURL = documentsURL.appendingPathComponent(fileName)
+        
+        do {
+            try data.write(to: fileURL)
+            return fileName
+        } catch {
+            print("Error saving image: \(error)")
+            return nil
         }
     }
     

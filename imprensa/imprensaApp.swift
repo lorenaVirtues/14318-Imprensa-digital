@@ -24,6 +24,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, GCKLoggerDelegate {
   }
 
   func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+      // Se a chave não existir, o padrão agora é permitir rotação
+      if UserDefaults.standard.object(forKey: "rotationEnabled") == nil {
+          return .allButUpsideDown
+      }
+      
       if UserDefaults.standard.bool(forKey: "rotationEnabled") {
           return .allButUpsideDown
       } else {

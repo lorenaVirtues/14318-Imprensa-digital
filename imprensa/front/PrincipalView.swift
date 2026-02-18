@@ -111,9 +111,6 @@ struct PrincipalView: View {
                         // Inicializa o player
                         radioPlayer.initPlayer(url: url)
                         
-                        // Lógica de Play:
-                        // 1. Se for a primeira vez que o app abre, respeita o UserDefaults.autoplayEnabled
-                        // 2. Se a URL mudou (troca de rádio), o usuário geralmente espera que o som mude/comece.
                         if isFirstTime {
                             if UserDefaults.autoplayEnabled {
                                 radioPlayer.play(model)
@@ -238,10 +235,11 @@ struct PrincipalView: View {
                     
                     bannerView(webView: banner.webView)
                         .frame(width: geo.size.width * 0.8, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.08)
-                        .padding(5)
+                        .padding(UIDevice.current.userInterfaceIdiom == .phone ? 5 : 10)
                     
                     Divider()
                         .foregroundColor(.gray)
+                        .padding(.vertical)
                         .padding(.horizontal, 20)
                     
                     ZStack {
@@ -351,28 +349,13 @@ struct PrincipalView: View {
                                         .scaleEffect(1.1)
                                     
                                     ZStack {
-                                        if let artwork = radioPlayer.albumArtwork {
-                                            Image(uiImage: artwork)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.45, height: geo.size.height * 0.35)
-                                                .mask(
-                                                    Image(UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                )
-                                                .border(Color.green)
-                                                .scaleEffect(1.1)
-                                                .offset(y: geo.size.height * -0.02)
-                                        } else {
-                                            Image(UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.5 : geo.size.width * 0.4, height: geo.size.height * 0.35)
-                                                .border(Color.green)
-                                                .scaleEffect(1.1)
-                                                .offset(y: geo.size.height * -0.02)
-                                        }
+                                        AlbumArtworkView(
+                                            artwork: radioPlayer.albumArtwork,
+                                            maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
+                                        )
+                                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.45, height: geo.size.height * 0.35)
+                                        .scaleEffect(1.1)
+                                        .offset(y: geo.size.height * -0.02)
                                         
                                         
                                         if dataController.minimalMode {
@@ -400,6 +383,221 @@ struct PrincipalView: View {
             Color.white
                 .ignoresSafeArea(.all)
             
+            ScrollView(showsIndicators: false) {
+                LazyVStack {
+                    HStack(alignment: .bottom){
+                        if dataController.minimalMode {
+                            Image("logo")
+                                  .resizable()
+                                  .scaledToFit()
+                                  .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                        } else {
+                            LottieView(animationName: "logotipo")
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                                .scaleEffect(2.3)
+                        }
+                       
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 5){
+                            HeaderDateTimeView()
+                        }
+                    }
+                    .padding(.top, 10)
+                    
+                    Divider()
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 20)
+                    
+                    HStack{
+                        Image("btn_nav_home_active")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.15, height: geo.size.height * 0.1)
+                            .border(Color.red)
+                        
+                        Spacer()
+                        
+                        Button(action:{
+                            router.go(to: .audio)
+                        }, label:{
+                            Image("btn_nav_audio_player_default")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                                .border(Color.red)
+                        })
+                        
+                        Spacer()
+                        
+                        Button(action:{
+                            router.go(to: .config)
+                        }, label:{
+                            Image("btn_nav_settings_default")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                        })
+                        
+                        Spacer()
+                        
+                        Button(action:{
+                            router.go(to: .menu)
+                        }, label:{
+                            Image("btn_nav_menu_default")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                        })
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showCompartilhar = true
+                        }, label:{
+                            Image("btn_share")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                        })
+                        
+                        Spacer()
+                        
+                        Image("bg_triangle_nav_buttons")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.04, height: geo.size.height * 0.08)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    BannerCarouselView(geo: geo) { bannerName in
+                        handleBannerTap(bannerName)
+                    }
+                    .padding(.vertical, 10)
+                    
+                    bannerView(webView: banner.webView)
+                        .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.08)
+                        .padding(5)
+                    
+                    Divider()
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 20)
+                    
+                    // Now Playing Section for Landscape
+                    HStack(alignment: .center, spacing: 20) {
+                        VStack(alignment: .leading) {
+                            Image("bg_title_playing_now")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.25, height: geo.size.height * 0.05)
+                            
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(radioPlayer.itemMusic)
+                                    .font(.custom("Spartan-Bold", size: 18))
+                                    .foregroundColor(.black)
+                                
+                                Text(radioPlayer.itemArtist)
+                                    .font(.custom("Spartan-Regular", size: 16))
+                                    .foregroundColor(.black)
+                            }
+                            .padding(.vertical, 5)
+                            
+                            HStack(spacing: 20) {
+                                Button(action: { withAnimation { showingPlaylistPicker = true } }) {
+                                    Image("btn_add_playlist_active_principal")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                }
+                                
+                                Button(action: { }) {
+                                    Image("btn_mute")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                }
+                                
+                                Button(action: {
+                                    if radioPlayer.isPlaying { radioPlayer.stop() }
+                                    else { radioPlayer.play(self.radio) }
+                                }) {
+                                    ZStack {
+                                        if radioPlayer.isPlaying {
+                                            LottieView(animationName: "pause_principal")
+                                                .scaledToFit()
+                                                .frame(width: geo.size.width * 0.2, height: geo.size.height * 0.15)
+                                                .scaleEffect(1.8)
+                                        } else {
+                                            LottieView(animationName: "play_principal")
+                                                .scaledToFit()
+                                                .frame(width: geo.size.width * 0.2, height: geo.size.height * 0.15)
+                                                .scaleEffect(1.8)
+                                        }
+                                        
+                                        if radioPlayer.isLoading {
+                                            LoadingView()
+                                                .scaleEffect(1.2)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.leading, 30)
+                        
+                        Spacer()
+                        
+                       
+                    }
+                    HStack {
+                        
+                        Button(action: {
+                            showSocialFeed = true
+                        }) {
+                            Image("btn_expand_social_media")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.2, height: geo.size.height * 0.2)
+                        }
+                        .offset(y: geo.size.height * 0.1)
+                        
+                        Spacer()
+                        ZStack{
+                            Image("bg_main_song_cover_shadow")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.5)
+                                .scaleEffect(1.1)
+                                .border(Color.green)
+                                .offset(x: geo.size.width * 0.1)
+                            
+                            ZStack {
+                                AlbumArtworkView(
+                                    artwork: radioPlayer.albumArtwork,
+                                    maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
+                                )
+                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.35 : geo.size.width * 0.45, height: geo.size.height * 0.55)
+                                .scaleEffect(1.1)
+                                .border(Color.blue)
+                                .offset(x: geo.size.width * 0.1, y: geo.size.height * -0.01)
+                                
+                                
+                                if dataController.minimalMode {
+                                   
+                                } else {
+                                    LottieView(animationName: "traco_capa_de_album_principal")
+                                        .scaledToFill()
+                                        .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.55)
+                                        .scaleEffect(1.3)
+                                        .offset(x: geo.size.width * 0.17, y: geo.size.height * 0.01)
+                                }
+                            }
+                        }
+                    }
+                    
+                    
+                }
+            }
         }
     }
     

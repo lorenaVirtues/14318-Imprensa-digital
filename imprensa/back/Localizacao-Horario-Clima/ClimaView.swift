@@ -16,60 +16,269 @@ struct ClimaView: View {
 
     var body: some View {
         GeometryReader { geo in
-                Color("azulEscuro")
-                    .edgesIgnoringSafeArea(.bottom)
-            Color(.white)
-                .edgesIgnoringSafeArea(.top)
-            ZStack {
-                Color.white
-                
-                
-                
-                // Building Silhouette (Subtle)
-                VStack {
-                    Image("img_weather_background_sunny")
-                        .resizable()
-                        .scaledToFit()
-                    Spacer()
-                    
-                }
-
-                if let error = weatherSvc.errorMessage {
-                    errorView(message: error)
-                } else if weatherSvc.currentTemp != nil {
-                    mainContentView(geo: geo)
-                } else {
-                    switch locManager.authStatus {
-                    case .denied, .restricted:
-                        permissionDeniedView(geo: geo)
-                    case .notDetermined:
-                        requestPermissionView(geo: geo)
-                    default:
-                        loadingView()
-                    }
-                }
-                
-                // Bottom Left Refresh/Back Button
-                VStack {
-                    Spacer()
-                    HStack {
-                        Button(action: {
-                            router.go(to: .menu)
-                        }) {
-                            Image("btn_return")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100)
-                        }
-                        Spacer()
-                    }
-                }
+            if geo.size.width > geo.size.height {
+                landscapeView(geo: geo)
+            } else {
+                portraitView(geo: geo)
             }
-            .onAppear { fetchIfPossible() }
-            .onChange(of: locManager.lastLocation) { _ in fetchIfPossible() }
         }
+        .onAppear { fetchIfPossible() }
+        .onChange(of: locManager.lastLocation) { _ in fetchIfPossible() }
         .navigationBarHidden(true)
     }
+
+    // MARK: - Orientation Views
+
+    @ViewBuilder
+    private func portraitView(geo: GeometryProxy) -> some View {
+        ZStack {
+            Color.white
+            
+            // Building Silhouette (Subtle)
+            VStack {
+                Image(weatherSvc.condition?.assetName.replacingOccurrences(of: "ic_", with: "img_weather_background_") ?? "img_weather_background_sunny")
+                    .resizable()
+                    .scaledToFit()
+                Spacer()
+            }
+
+            if let error = weatherSvc.errorMessage {
+                errorView(message: error)
+            } else if weatherSvc.currentTemp != nil {
+                mainContentView(geo: geo)
+            } else {
+                switch locManager.authStatus {
+                case .denied, .restricted:
+                    permissionDeniedView(geo: geo)
+                case .notDetermined:
+                    requestPermissionView(geo: geo)
+                default:
+                    loadingView()
+                }
+            }
+            
+            // Bottom Left Back Button
+            VStack {
+                Spacer()
+                HStack {
+                    Button(action: {
+                        router.go(to: .menu)
+                    }) {
+                        Image("btn_return")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func landscapeView(geo: GeometryProxy) -> some View {
+        ZStack {
+            Color.white.ignoresSafeArea()
+            
+            HStack {
+                Spacer()
+                Image("img_weather_background_sunny")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 250, height: 300)
+                    .rotationEffect(.degrees(90))
+                    .ignoresSafeArea(.all)
+                    .border(Color.green)
+            }
+            .ignoresSafeArea(.all)
+            
+            HStack(spacing: 0) {
+                // Main Content
+                VStack(spacing: 10) {
+                    // Top Headers
+                    HStack(alignment: .top) {
+                        // Location Box
+                        ZStack {
+                            Image("bg_weather_location")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 200, height: 45)
+                            
+                            HStack(spacing: 5) {
+                                Text(locManager.city ?? "Salvador")
+                                    .font(.custom("Spartan-Regular", size: 16))
+                                Text(locManager.state ?? "BA")
+                                    .font(.custom("Spartan-Bold", size: 16))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.trailing, 15)
+                        }
+                        
+                        Spacer()
+                        
+                        // Time/Date
+                        HeaderDateTimeView()
+                            .padding(.trailing, 30)
+                        
+                        Image("bg_triangle_nav_buttons")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 25, height: 25)
+                            .padding(.top, 5)
+                            .padding(.trailing, 10)
+                    }
+                    .padding(.top, 10)
+                    
+                    Divider()
+                        .padding(.horizontal, 30)
+                    
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 15) {
+                            // Forecast Row
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color(white: 0.96))
+                                    .frame(height: 95)
+                                
+                                HStack(spacing: 10) {
+                                    ForEach(Array(weatherSvc.daily.prefix(5).enumerated()), id: \.offset) { index, day in
+                                        ForecastBox(
+                                            day: shortWeekday(day.dateISO),
+                                            icon: WeatherCondition.from(code: day.code).assetName,
+                                            tempMax: "\(day.max)°",
+                                            tempMin: "\(day.min)°",
+                                            isActive: index == 0
+                                        )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 30)
+                            
+                            // Graph Card
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .stroke(Color(red: 26/255, green: 60/255, blue: 104/255), lineWidth: 1.5)
+                                    .background(Color.white)
+                                
+                                VStack(spacing: 0) {
+                                    HStack {
+                                        if !weatherSvc.hourlyTemperatures.isEmpty {
+                                            ForEach(sampleHourlyIndices(), id: \.self) { idx in
+                                                Text("\(weatherSvc.hourlyTemperatures[idx].temp)")
+                                                if idx != lastHourlyIndex() { Spacer() }
+                                            }
+                                        }
+                                    }
+                                    .font(.custom("Spartan-Regular", size: 10))
+                                    .foregroundColor(.gray)
+                                    .padding(.horizontal, 30)
+                                    .padding(.top, 10)
+                                    
+                                    TemperatureChart(data: weatherSvc.hourlyTemperatures)
+                                        .frame(height: 100)
+                                    
+                                    HStack {
+                                        if !weatherSvc.hourlyTemperatures.isEmpty {
+                                            ForEach(sampleHourlyIndices(), id: \.self) { idx in
+                                                Text(formatTime(weatherSvc.hourlyTemperatures[idx].date))
+                                                if idx != lastHourlyIndex() { Spacer() }
+                                            }
+                                        }
+                                    }
+                                    .font(.custom("Spartan-Regular", size: 10))
+                                    .foregroundColor(.gray)
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 10)
+                                }
+                            }
+                            .frame(height: 160)
+                            .padding(.horizontal, 30)
+                            
+                            // Bottom Stats Bar
+                            ZStack {
+                                Image("bg_card_weather_stats_bar")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                                
+                                HStack(spacing: 0) {
+                                    StatItem(icon: "ic_precipitation", value: "\(weatherSvc.precipProbPct ?? 0)%", isLast: false)
+                                    StatItem(icon: "ic_humidity", value: "\(weatherSvc.humidityPct ?? 0)%", isLast: false)
+                                    StatItem(icon: "ic_wind", value: "\(weatherSvc.windKmh ?? 0)km/h", isLast: true)
+                                }
+                            }
+                            .padding(.horizontal, 50)
+                            .padding(.bottom, 20)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .offset(x: geo.size.width * 0.1)
+                
+                // Right Sidebar (The rotated part)
+                VStack(spacing: 30) {
+                    
+                    Image(weatherSvc.condition?.assetName ?? "ic_sunny")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100)
+                    
+                    VStack(alignment: .leading, spacing: -5) {
+                        HStack(alignment: .top, spacing: 0) {
+                            Text("\(weatherSvc.currentTemp ?? 0)")
+                                .font(.custom("Spartan-Bold", size: 70))
+                                .foregroundColor(.white)
+                            
+                            Text("°C")
+                                .font(.custom("Spartan-Bold", size: 24))
+                                .foregroundColor(.white)
+                                .padding(.top, 15)
+                        }
+                        
+                        Text(weatherSvc.condition?.description ?? "—")
+                            .font(.custom("Spartan-Bold", size: 22))
+                            .foregroundColor(.white)
+                        
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 14, weight: .bold))
+                            Text("\(weatherSvc.maxTemp ?? 0)° | \(weatherSvc.minTemp ?? 0)°")
+                                .font(.custom("Spartan-Bold", size: 16))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.top, 5)
+                    }
+                    .padding(.leading, 20)
+                    
+                    Spacer()
+                }
+                .frame(width: geo.size.width * 0.32)
+                .clipped()
+                .padding()
+                .offset(x: geo.size.width * 0.1)
+            }
+            
+            // Return Button
+            VStack {
+                Spacer()
+                HStack {
+                    Button(action: {
+                        router.go(to: .menu)
+                    }) {
+                        Image("btn_return")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120)
+                    }
+                    Spacer()
+                }
+            }
+            .padding(.bottom, 10)
+            .padding(.leading, 10)
+        }
+    }
+
 
     // MARK: - Subviews
 
@@ -444,7 +653,7 @@ struct StatItem: View {
             }
             
             Text(value)
-                .font(.custom("Spartan-Regular", size: 16))
+                .font(.custom("Spartan-Regular", size: UIDevice.current.userInterfaceIdiom == .phone ? 14 : 16))
                 .foregroundColor(.white)
             Spacer()
             
@@ -503,7 +712,7 @@ struct TemperatureChart: View {
                     path.closeSubpath()
                 }
                 .fill(
-                    Color("azulClaro")
+                    Color("azulClaro").opacity(0.3)
                 )
             }
         }

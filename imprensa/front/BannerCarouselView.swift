@@ -19,12 +19,21 @@ struct BannerCarouselView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: UIDevice.current.userInterfaceIdiom == .phone ? -40 : 25) {
                     ForEach(0..<banners.count, id: \.self) { index in
                         GeometryReader { cardGeo in
                             let isPad = UIDevice.current.userInterfaceIdiom == .pad
-                            let cardWidth = geo.size.width * (isPad ? 0.45 : 0.80)
-                            let cardHeight = geo.size.height * (isPad ? 0.30 : 0.22)
+                            let isLandscape = geo.size.width > geo.size.height
+                            
+                            let cardWidth: CGFloat = {
+                                if isLandscape { return geo.size.width * (isPad ? 0.30 : 0.40) }
+                                return geo.size.width * (isPad ? 0.45 : 0.80)
+                            }()
+                            
+                            let cardHeight: CGFloat = {
+                                if isLandscape { return geo.size.height * (isPad ? 0.35 : 0.40) }
+                                return geo.size.height * (isPad ? 0.30 : 0.22)
+                            }()
                             
                             Group {
                                 Button(action: {
@@ -36,7 +45,7 @@ struct BannerCarouselView: View {
                                     } else {
                                         Image(banners[index])
                                             .resizable()
-                                            .scaledToFit()
+                                            .scaledToFit() // Voltei para fit para não cortar as bordas
                                             .frame(width: cardWidth, height: cardHeight)
                                             .cornerRadius(12)
                                     }
@@ -50,13 +59,28 @@ struct BannerCarouselView: View {
                                 updateIndex(cardGeo: cardGeo, index: index, totalWidth: geo.size.width)
                             }
                         }
-                        .frame(width: geo.size.width * (UIDevice.current.userInterfaceIdiom == .pad ? 0.45 : 0.80), 
-                               height: geo.size.height * (UIDevice.current.userInterfaceIdiom == .pad ? 0.32 : 0.24))
+                        .frame(width: {
+                            let isLandscape = geo.size.width > geo.size.height
+                            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+                            if isLandscape { return geo.size.width * (isPad ? 0.30 : 0.40) }
+                            return geo.size.width * (isPad ? 0.45 : 0.80)
+                        }(), 
+                        height: {
+                            let isLandscape = geo.size.width > geo.size.height
+                            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+                            if isLandscape { return geo.size.height * (isPad ? 0.35 : 0.40) }
+                            return geo.size.height * (isPad ? 0.32 : 0.24)
+                        }())
                     }
                 }
                 .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 10)
             }
-            .frame(height: geo.size.height * (UIDevice.current.userInterfaceIdiom == .pad ? 0.32 : 0.24))
+            .frame(height: {
+                let isLandscape = geo.size.width > geo.size.height
+                let isPad = UIDevice.current.userInterfaceIdiom == .pad
+                if isLandscape { return geo.size.height * (isPad ? 0.35 : 0.40) }
+                return geo.size.height * (isPad ? 0.32 : 0.24)
+            }())
             
             // Indicador de página (Bolinhas)
             HStack(spacing: 8) {

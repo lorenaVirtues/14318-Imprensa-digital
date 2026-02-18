@@ -404,10 +404,13 @@ struct ConfigView: View {
                         
                         // APARÊNCIA Section
                         ConfigSection(title: "APARÊNCIA") {
-                            ConfigToggle(title: "Animações", subtitle: "Ativa as animações do layout.", icon: "icone_animacoes", isOn: Binding(
-                                get: { !dataController.minimalMode },
-                                set: { dataController.minimalMode = !$0 }
-                            ))
+                            VStack(spacing: 0) {
+                                ConfigToggle(title: "Animações", subtitle: "Ativa as animações do layout.", icon: "icone_animacoes", isOn: Binding(
+                                    get: { !dataController.minimalMode },
+                                    set: { dataController.minimalMode = !$0 }
+                                ))
+                                
+                            }
                         }
                         
                         Divider()
@@ -432,11 +435,7 @@ struct ConfigView: View {
                                      .resizable()
                                      .scaledToFit()
                                      .frame(width: geo.size.width * 0.4)
-                                     .overlay(
-                                        Text("OPÇÃO AVANÇADO")
-                                            .font(.custom("Spartan-Bold", size: 10))
-                                            .foregroundColor(.white)
-                                     )
+                                     
                             }
                         }
                         .padding(.vertical, 20)
@@ -449,9 +448,271 @@ struct ConfigView: View {
     
     @ViewBuilder
     private func landscape(geo: GeometryProxy) -> some View {
-        ZStack{
+        ZStack {
             Color.white
                 .ignoresSafeArea(.all)
+            
+            VStack{
+                HStack(alignment: .bottom){
+                    if dataController.minimalMode {
+                        Image("logo")
+                              .resizable()
+                              .scaledToFit()
+                              .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                    } else {
+                        LottieView(animationName: "logotipo")
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                            .scaleEffect(2.3)
+                    }
+                   
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 5){
+                        HeaderDateTimeView()
+                    }
+                }
+                .padding(.top, 10)
+               
+                Divider()
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 20)
+                
+                HStack{
+                    Button(action:{
+                        router.goHome()
+                    }, label:{
+                        Image("btn_nav_home_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                            
+                    })
+                   
+                    Spacer()
+                    
+                    Button(action:{
+                        router.go(to: .audio)
+                    }, label:{
+                        Image("btn_nav_audio_player_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                            
+                    })
+                    
+                    Spacer()
+                    
+                    Image("btn_nav_settings_active")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.15, height: geo.size.height * 0.1)
+                        
+                    
+                    Spacer()
+                    
+                    Button(action:{
+                        router.go(to: .menu)
+                    }, label:{
+                        Image("btn_nav_menu_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                            
+                    })
+                    
+                    Spacer()
+                    
+                    Image("bg_triangle_nav_buttons")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.04, height: geo.size.height * 0.08)
+                        
+                }
+                .padding(.leading, 20)
+                
+                Divider()
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 15) {
+                        // ÁUDIO Section
+                        ConfigSection(title: "ÁUDIO") {
+                            VStack(spacing: 0) {
+                                ConfigToggle(title: "Auto-Play", subtitle: "Áudio inicia automaticamente ao abrir o aplicativo.", icon: "icone_auto_play", isOn: $autoPlay)
+                                Divider().padding(.horizontal)
+                                
+                                ConfigToggle(title: "Áudio Mono", subtitle: "Alto-falantes esquerdo e direito tocam o mesmo áudio.", icon: "icone_audio_mono", isOn: Binding(
+                                    get: { audioMono },
+                                    set: { newValue in
+                                        if newValue {
+                                            activeAlert = .monoConfirm
+                                        } else {
+                                            audioMono = false
+                                        }
+                                    }
+                                ))
+                                Divider().padding(.horizontal)
+                                
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Image("icone_balanco_de_audio")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 25)
+                                        
+                                        Text("• Balanço de Áudio")
+                                            .appFont(weight: .bold, size: 14)
+                                            .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                    }
+                                    
+                                    CustomSlider(value: $audioBalance, range: 0...1, onEnded: {
+                                        activeAlert = .generic(title: "Balanço de Áudio", message: "Você também pode ajustar o balanço do sistema em Ajustes do aparelho.")
+                                    })
+                                    
+                                    HStack {
+                                        Text("Esquerdo")
+                                        Spacer()
+                                        Text("Direito")
+                                    }
+                                    .font(.custom("Spartan-Regular", size: 10))
+                                    .foregroundColor(.gray)
+                                }
+                                .padding()
+                            }
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // COMANDOS DE VOZ Section
+                        ConfigSection(title: "COMANDOS DE VOZ") {
+                            VStack(spacing: 0) {
+                                ConfigToggle(title: "Comandos", subtitle: "Ativa a navegação por comandos de voz.", icon: "icone_comandos", isOn: Binding(
+                                    get: { voiceCommands },
+                                    set: { newValue in
+                                        voiceCommands = newValue
+                                        if newValue { activeAlert = .voiceHelp } else {
+                                            activeAlert = .generic(title: "Comandos de Voz", message: "Navegação por voz desativada.")
+                                        }
+                                    }
+                                ))
+                                Divider().padding(.horizontal)
+                                ConfigToggle(title: "Sons de Feedback", subtitle: "Toca sons ao ativar o microfone, ao dar resultado de comandos ou erros.", icon: "icone_sons_de_feedback", isOn: $feedbackSounds)
+                                Divider().padding(.horizontal)
+                                
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Image("icone_inatiivdade")
+                                            .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                        Text("• Inatividade")
+                                            .font(.custom("Spartan-Bold", size: 14))
+                                            .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                    }
+                                    
+                                    Text("Expira se não houver fala. Defina o tempo (segundos) abaixo.")
+                                        .font(.custom("Spartan-Regular", size: 12))
+                                        .foregroundColor(.gray)
+                                    
+                                    CustomSlider(value: $inactivityTime, range: 5...30)
+                                    
+                                    HStack {
+                                        Text("05")
+                                        Spacer()
+                                        Text("10")
+                                        Spacer()
+                                        Text("15")
+                                        Spacer()
+                                        Text("20")
+                                        Spacer()
+                                        Text("25")
+                                        Spacer()
+                                        Text("30")
+                                    }
+                                    .font(.custom("Spartan-Regular", size: 10))
+                                    .foregroundColor(.gray)
+                                }
+                                .padding()
+                            }
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // PERMISSÕES Section
+                        ConfigSection(title: "PERMISSÕES") {
+                            VStack(spacing: 0) {
+                                ConfigToggle(title: "Localização", subtitle: "Previsão do tempo e hora com base na sua localização atual.", icon: "icone_localizacao", isOn: Binding(
+                                    get: { locationPermission },
+                                    set: { newValue in
+                                        if !newValue {
+                                            activeAlert = .locationInfo
+                                        } else {
+                                            locationPermission = true
+                                        }
+                                    }
+                                ))
+                                Divider().padding(.horizontal)
+                                ConfigToggle(title: "Pareamento", subtitle: "Busca dispositivos (Bluetooth e Chromecast) para transmitir", icon: "icone_pareamento", isOn: Binding(
+                                    get: { pairingPermission },
+                                    set: { newValue in
+                                        if !newValue {
+                                            activeAlert = .pairingInfo
+                                        } else {
+                                            pairingPermission = true
+                                        }
+                                    }
+                                ))
+                            }
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // APARÊNCIA Section
+                        ConfigSection(title: "APARÊNCIA") {
+                            VStack(spacing: 0) {
+                                ConfigToggle(title: "Animações", subtitle: "Ativa as animações do layout.", icon: "icone_animacoes", isOn: Binding(
+                                    get: { !dataController.minimalMode },
+                                    set: { dataController.minimalMode = !$0 }
+                                ))
+                            }
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // Bottom Buttons
+                        HStack(spacing: 20) {
+                            Button(action: {
+                                showSaveAlert = true
+                            }) {
+                               Image("btn_apply_changes")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: geo.size.width * 0.25)
+                            }
+                            
+                            Button(action: {
+                                activeAlert = .advanced
+                            }) {
+                                Image("btn_reset_default") // Usando o botão como 'Opção Avançado' visualmente ou substituindo se houver imagem específica
+                                     .resizable()
+                                     .scaledToFit()
+                                     .frame(width: geo.size.width * 0.25)
+                            }
+                        }
+                        .padding(.vertical, 20)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
         }
     }
 }

@@ -48,8 +48,14 @@ struct ItunesTrack: Codable {
 
 
 class RadioPlayer: NSObject, ObservableObject {
-    @Published var itemArtist: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Radio Eldorado BA"
-    @Published var itemMusic: String = "Há mais de 7 anos no ar!"
+    enum MetadataSource {
+        case rds
+        case shazam
+        case placeholder
+    }
+    
+    @Published var itemArtist: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Radio"
+    @Published var itemMusic: String = "Sua rádio favorita!"
     @Published var albumArtwork: UIImage? = UIImage(named: "live") 
     @Published private(set) var isPlaying: Bool = false
     @Published var isLoading: Bool = false
@@ -57,6 +63,9 @@ class RadioPlayer: NSObject, ObservableObject {
     @Published var showAlertConnect: Bool = false
     @Published var isConnected: Bool = true
     @Published var currentArtworkUrl: String? = nil
+    @Published var lastMetadataSource: MetadataSource = .placeholder
+    @Published var lastShazamAt: Date? = nil
+    
     @Published var volume: Float = 1.0 {
         didSet {
             player?.volume = volume
@@ -424,6 +433,96 @@ class RadioPlayer: NSObject, ObservableObject {
             MPNowPlayingInfoPropertyIsLiveStream: true
         ]
     }
+
+
+    /// Atualiza os metadados do player com controle de prioridade entre RDS e Shazam.
+    func updateMetadata(artist: String, music: String, source: MetadataSource) {
+        let newArtist = artist.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let newMusic = music.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        
+        // Se ambos estão vazios, ignora
+        if newArtist.isEmpty && newMusic.isEmpty { return }
+        
+        // Se for RDS, verifica se é "genérico" demais
+        if source == .rds {
+            if isGenericMetadata(artist: newArtist, music: newMusic) {
+                print("[RadioPlayer] RDS Ignored (Generic): \(newArtist) - \(newMusic)")
+                return
+            }
+            
+            // Se temos um resultado do Shazam recente (5 min), ignora o RDS totalmente
+            if lastMetadataSource == .shazam, let last = lastShazamAt, Date().timeIntervalSince(last) < 300 {
+                print("[RadioPlayer] RDS Ignored (Shazam Priority 5min): \(newArtist) - \(newMusic)")
+                return
+            }
+        }
+        
+        // Se mudou ou se é uma fonte de maior prioridade (Shazam)
+        let changed = (itemArtist != newArtist || itemMusic != newMusic)
+        if changed || source == .shazam {
+            self.itemArtist = newArtist
+            self.itemMusic = newMusic
+            self.lastMetadataSource = source
+            
+            if source == .shazam {
+                self.lastShazamAt = Date()
+            }
+            
+            print("[RadioPlayer] Metadata Updated (\(source)): \(newArtist) - \(newMusic)")
+            updateAlbumArtwork(from: newArtist, track: newMusic)
+            setupNowPlayingInfo(with: artwork)
+        }
+    }
+    
+    private func isGenericMetadata(artist: String, music: String) -> Bool {
+        let appName = (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "").lowercased()
+        let a = artist.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let m = music.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 1. Detectar URLs e Domínios (regex mais forte)
+        let urlPattern = #"(?i)\b((https?|ftp)://|www\d{0,3}\.|[a-z0-9.\-]+\.[a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])"#
+        if a.range(of: urlPattern, options: .regularExpression) != nil || 
+           m.range(of: urlPattern, options: .regularExpression) != nil {
+            return true
+        }
+        
+        // 2. Termos genéricos de rádio e mensagens de sistema
+        let genericTerms = [
+            "rádio", "radio", "fm", "am", "web", "ao vivo", "online", "ouça", "site", "tocando agora", 
+            "eldorado", "morrinhos", "imprensa", "whatsapp", "facebook", "instagram", "twitter", "seguidores",
+            "programa", "locutor", "telefone", "fone", "peça sua", "musica", "sucesso", "top", "hits",
+            "curta", "compartilhe", "baixe", "aplicativo", "app", "anuncie", "comercial", "publicidade",
+            "agora", "escuta", "escutando"
+        ]
+        
+        // 3. Se o nome do app estiver presente em ambos
+        if !appName.isEmpty && (a.contains(appName) || m.contains(appName)) {
+            return true
+        }
+        
+        // 4. Se algum campo contiver termos de rede social ou domínios comuns
+        let patterns = [".com", ".br", ".net", ".org", "http", "@"]
+        for p in patterns {
+            if a.contains(p) || m.contains(p) { return true }
+        }
+        
+        // 5. Se os campos forem muito curtos (menos de 2 letras) ou apenas números/símbolos
+        if a.count < 2 || m.count < 2 { return true }
+        
+        // 6. Lista de termos genéricos (se o campo contiver apenas isso ou for dominante)
+        let aIsGeneric = genericTerms.contains { a == $0 || a.hasPrefix($0 + " ") || a.hasSuffix(" " + $0) }
+        let mIsGeneric = genericTerms.contains { m == $0 || m.hasPrefix($0 + " ") || m.hasSuffix(" " + $0) }
+        if aIsGeneric || mIsGeneric { return true }
+        
+        // 7. Verficar se contém números de telefone (simplificado)
+        let phonePattern = #"\d{2,4}[- ]?\d{4,5}[- ]?\d{4}"#
+        if a.range(of: phonePattern, options: .regularExpression) != nil ||
+           m.range(of: phonePattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        return false
+    }
 }
 
 extension RadioPlayer: AVPlayerItemMetadataOutputPushDelegate {
@@ -431,17 +530,39 @@ extension RadioPlayer: AVPlayerItemMetadataOutputPushDelegate {
                         didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
                         from track: AVPlayerItemTrack?) {
         if let item = groups.first?.items.first {
-            let metadataValue = item.stringValue ?? ""
-            print("Metadados recebidos: \(metadataValue)")
+            let rawValue = item.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if rawValue.isEmpty { return }
             
-            if metadataValue.contains(" - ") {
-                let arMetadata = metadataValue.components(separatedBy: " - ")
-                self.itemArtist = arMetadata[0].trimmingCharacters(in: .whitespacesAndNewlines)
-                self.itemMusic = arMetadata.count > 1 ? arMetadata[1].trimmingCharacters(in: .whitespacesAndNewlines) : self.itemMusic
-                updateAlbumArtwork(from: self.itemArtist, track: self.itemMusic)
+            print("Metadados RDS recebidos: \(rawValue)")
+            
+            // Tenta separar Artista - Música
+            let separators = [" - ", " – ", " — "] // Diferentes tipos de traços
+            var artistStr = ""
+            var musicStr = ""
+            
+            var found = false
+            for sep in separators {
+                if rawValue.contains(sep) {
+                    let parts = rawValue.components(separatedBy: sep)
+                    artistStr = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                    musicStr = (parts.count > 1 ? parts[1] : "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    found = true
+                    break
+                }
             }
             
-            setupNowPlayingInfo(with: artwork)
+            if !found {
+                artistStr = itemArtist // Mantém o artista atual se não houver separador
+                musicStr = rawValue
+            }
+            
+            // Validação final antes de enviar para o updateMetadata
+            if isGenericMetadata(artist: artistStr, music: musicStr) {
+                print("[RadioPlayer] RDS Ignored after parse (Generic/URL): \(artistStr) - \(musicStr)")
+                return
+            }
+            
+            updateMetadata(artist: artistStr, music: musicStr, source: .rds)
         }
     }
 }

@@ -24,18 +24,53 @@ struct ContatoView: View {
     @State private var isSending = false
     
     var body: some View {
-        Color("azulEscuro")
-            .edgesIgnoringSafeArea(.bottom)
+        GeometryReader { geo in
+            ZStack {
+                Color("azulEscuro")
+                    .edgesIgnoringSafeArea(.bottom)
+                Color.white
+                
+                if geo.size.width > geo.size.height {
+                    landscapeView(geo: geo)
+                } else {
+                    portraitView(geo: geo)
+                }
+                
+                if isSending {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    ProgressView("Enviando...")
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+                }
+                
+                if showAlert {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    AlertaView(
+                        message: alertMessage,
+                        alertType: alertType
+                    ) {
+                        withAnimation { showAlert = false }
+                        if shouldDismissOnAlert {
+                            router.backTopLevel()
+                        }
+                    }
+                    .zIndex(1)
+                }
+            }
+        }
+        .navigationBarHidden(true)
+        .preferredColorScheme(.light)
+    }
+    
+    @ViewBuilder
+    private func portraitView(geo: GeometryProxy) -> some View {
         ZStack {
-            Color.white
-            
             VStack(spacing: 0) {
-                // Header
                 headerView
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 25) {
-                        // Title / Subtitle
                         VStack(spacing: 5) {
                             Text("Tem um recado?")
                                 .font(.custom("Spartan-Bold", size: 18))
@@ -47,7 +82,6 @@ struct ContatoView: View {
                         }
                         .padding(.top, 20)
                         
-                        // Fields Grid (Nome and Email in same row)
                         VStack(spacing: 20) {
                             HStack(spacing: 15) {
                                 formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
@@ -56,73 +90,13 @@ struct ContatoView: View {
                             
                             formField(label: "Assunto:", icon: "magnifyingglass", placeholder: "Assunto da mensagem...", text: $assunto, field: .assunto)
                             
-                            // Mensagem (Larger)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Mensagem:")
-                                    .font(.custom("Spartan-Bold", size: 16))
-                                    .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
-                                
-                                ZStack(alignment: .topLeading) {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .stroke(Color.gray, lineWidth: 1)
-                                        .background(Color.white)
-                                    
-                                    HStack(alignment: .top, spacing: 5) {
-                                        Image(systemName: "envelope.fill")
-                                            .foregroundColor(.gray)
-                                            .font(.system(size: 14))
-                                            .padding(.top, 12)
-                                        
-                                        ZStack(alignment: .topLeading) {
-                                            if mensagem.isEmpty {
-                                                Text("Sua mensagem....")
-                                                    .foregroundColor(.gray.opacity(0.6))
-                                                    .font(.custom("Spartan-Regular", size: 14))
-                                                    .padding(.top, 10)
-                                            }
-                                            
-                                            TextEditor(text: $mensagem)
-                                                .font(.custom("Spartan-Regular", size: 14))
-                                                .focused($focusedField, equals: .mensagem)
-                                                .opacity(mensagem.isEmpty ? 0.85 : 1)
-                                                .frame(minHeight: 180)
-                                                .padding(.top, 2)
-                                        }
-                                    }
-                                    .padding(.horizontal, 10)
-                                }
-                                .frame(height: 200)
-                            }
+                            messageField
                         }
                         .padding(.horizontal, 20)
                         
-                        // Enviar Button (Slanted style)
                         HStack {
                             Spacer()
-                            Button(action: submit) {
-                                HStack {
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 12))
-                                    Text("ENVIAR")
-                                        .font(.custom("Spartan-Bold", size: 18))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 30)
-                                .background(
-                                    ZStack {
-                                        // Simple slanted background
-                                        SlantedButtonShape()
-                                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
-                                        
-                                        // Shadow
-                                        SlantedButtonShape()
-                                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.3))
-                                            .offset(x: 2, y: 3)
-                                            .zIndex(-1)
-                                    }
-                                )
-                            }
+                            sendButton
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
@@ -131,46 +105,147 @@ struct ContatoView: View {
                 }
             }
             
-            // Bottom Left Back Button
             VStack {
                 Spacer()
                 HStack {
-                    Button(action: {
-                        router.backTopLevel()
-                    }) {
-                        Image("btn_return")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100)
+                    returnButton
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func landscapeView(geo: GeometryProxy) -> some View {
+        ZStack {
+            VStack(spacing: 0) {
+                headerView
+                
+                HStack(alignment: .top, spacing: 30) {
+                    // Left Column
+                    VStack(spacing: 15) {
+                        formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
+                        formField(label: "E-mail:", icon: "at", placeholder: "Seu e-mail....", text: $email, field: .email, keyboard: .emailAddress)
+                        formField(label: "Assunto:", icon: "magnifyingglass", placeholder: "Assunto da mensagem...", text: $assunto, field: .assunto)
+                    }
+                    .frame(width: geo.size.width * 0.45)
+                    
+                    // Right Column
+                    VStack(alignment: .trailing, spacing: 15) {
+                        messageField
+                        
+                        sendButton
+                            .padding(.top, 10)
+                    }
+                }
+                .padding(.horizontal, 30)
+                .padding(.top, 20)
+                
+                Spacer()
+            }
+            
+            // Bottom Left stylized return button
+            VStack {
+                Spacer()
+                HStack {
+                    ZStack(alignment: .bottomLeading) {
+                        // Blue corner element
+                        Circle()
+                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
+                            .frame(width: 140, height: 140)
+                            .offset(x: -70, y: 70)
+                        
+                        Button(action: {
+                            router.backTopLevel()
+                        }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 28, height: 28)
+                                .foregroundColor(.white)
+                                .padding(25)
+                        }
                     }
                     Spacer()
                 }
             }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var messageField: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Mensagem:")
+                .font(.custom("Spartan-Bold", size: 16))
+                .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
             
-            if isSending {
-                Color.black.opacity(0.4).ignoresSafeArea()
-                ProgressView("Enviando...")
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
-            }
-            
-            if showAlert {
-                Color.black.opacity(0.4).ignoresSafeArea()
-                AlertaView(
-                    message: alertMessage,
-                    alertType: alertType
-                ) {
-                    withAnimation { showAlert = false }
-                    if shouldDismissOnAlert {
-                        router.backTopLevel()
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(Color.gray, lineWidth: 1)
+                    .background(Color.white)
+                
+                HStack(alignment: .top, spacing: 5) {
+                    Image(systemName: "envelope.fill")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 14))
+                        .padding(.top, 12)
+                    
+                    ZStack(alignment: .topLeading) {
+                        if mensagem.isEmpty {
+                            Text("Sua mensagem....")
+                                .foregroundColor(.gray.opacity(0.6))
+                                .font(.custom("Spartan-Regular", size: 14))
+                                .padding(.top, 10)
+                        }
+                        
+                        TextEditor(text: $mensagem)
+                            .font(.custom("Spartan-Regular", size: 14))
+                            .focused($focusedField, equals: .mensagem)
+                            .opacity(mensagem.isEmpty ? 0.85 : 1)
+                            .frame(minHeight: 120)
+                            .padding(.top, 2)
                     }
                 }
-                .zIndex(1)
+                .padding(.horizontal, 10)
             }
+            .frame(height: 150)
         }
-        .navigationBarHidden(true)
-        .preferredColorScheme(.light)
+    }
+
+    private var sendButton: some View {
+        Button(action: submit) {
+            HStack {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 12))
+                Text("ENVIAR")
+                    .font(.custom("Spartan-Bold", size: 18))
+            }
+            .foregroundColor(.white)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 30)
+            .background(
+                ZStack {
+                    SlantedButtonShape()
+                        .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
+                    
+                    SlantedButtonShape()
+                        .fill(Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.3))
+                        .offset(x: 2, y: 3)
+                        .zIndex(-1)
+                }
+            )
+        }
+    }
+
+    private var returnButton: some View {
+        Button(action: {
+            router.backTopLevel()
+        }) {
+            Image("btn_return")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100)
+        }
     }
     
     // MARK: - Components

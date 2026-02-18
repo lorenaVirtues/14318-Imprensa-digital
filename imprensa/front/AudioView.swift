@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import AVKit
+import GoogleCast
 
 struct AudioView: View {
     @EnvironmentObject var dataController: AppDataController
@@ -55,34 +57,26 @@ struct AudioView: View {
             Color.white
             VStack {
                 ZStack {
-                    Image(UIDevice.current.userInterfaceIdiom == .phone ? "bg_song_cover_shadow" : "sombra_capa_de_album")
+                    Image(UIDevice.current.userInterfaceIdiom == .phone ? "bg_song_cover_shadow" : "bg_song_cover_shadow")
                         .resizable()
                         .scaledToFit()
+                        .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * -0.25)
                     
                     ZStack {
-                        if let artwork = radioPlayer.albumArtwork {
-                            Image(uiImage: artwork)
-                                .resizable()
-                                .scaledToFit()
-                                .mask(
-                                    Image(UIDevice.current.userInterfaceIdiom == .phone ? "img_song_cover" : "forma_capa_de_album")
-                                        .resizable()
-                                        .scaledToFit()
-                                )
-                                
-                        } else {
-                            Image(UIDevice.current.userInterfaceIdiom == .phone ? "img_song_cover" : "forma_capa_de_album")
-                                .resizable()
-                                .scaledToFit()
-                        }
+                        AlbumArtworkView(
+                            artwork: radioPlayer.albumArtwork,
+                            maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_song_cover" : "forma_capa_de_album"
+                        )
+                        .scaledToFit()
                         
                         if !dataController.minimalMode {
                             LottieView(animationName: "traco_capa_de_album_player")
                                 .scaledToFit()
                                 .scaleEffect(1.5)
-                                .offset(x: geo.size.width * 0.16, y: geo.size.height * -0.14)
+                                .offset(x: geo.size.width * 0.16, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.14 : geo.size.height * -0.3)
                         }
                     }
+                    .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * -0.15)
                     
                     
                     // Barra de Volume Diagonal
@@ -116,8 +110,8 @@ struct AudioView: View {
                                     }
                             )
                     }
-                    .rotationEffect(.degrees(-135)) // Rotaciona para que o início (0) fique embaixo e o fim (100) em cima
-                    .offset(x: -geo.size.width * 0.15, y: geo.size.height * 0.18)
+                    .rotationEffect(.degrees(-135))
+                    .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? -geo.size.width * 0.15 : -geo.size.width * 0.2, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.18 : geo.size.height * 0.0)
                     .border(Color.pink)
                 }.ignoresSafeArea(.all)
                 Spacer()
@@ -139,7 +133,7 @@ struct AudioView: View {
                                 .padding(.bottom, 5)
                         }
                         .foregroundColor(Color(red: 26/255, green: 60/255, blue: 114/255))
-                        .offset(x: -8)
+                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? -8 : -50)
                         .border(Color.yellow)
                     }
                     .border(Color.green)
@@ -156,7 +150,7 @@ struct AudioView: View {
                                 Image(radioPlayer.isPlaying ? "bg_player_pause" : "bg_player_play")
                                      .resizable()
                                      .scaledToFit()
-                                     .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.45)
+                                     .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3, height: geo.size.height * 0.45)
                                 
                                 if radioPlayer.isLoading {
                                     LoadingView()
@@ -167,14 +161,14 @@ struct AudioView: View {
                             ZStack {
                                 LottieView(animationName: "sombra_play")
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.45, height: geo.size.height * 0.3)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.45 : geo.size.width * 0.35, height: geo.size.height * 0.3)
                                     .scaleEffect(1.5)
                                     .offset(x: geo.size.width * 0.23, y: geo.size.height * 0.07)
                                 
                                 Image(radioPlayer.isPlaying ? "bg_pause" : "bg_play")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.45)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3, height: geo.size.height * 0.45)
                                     .offset(x: geo.size.width * 0.05)
                                 
                                 if radioPlayer.isLoading {
@@ -191,7 +185,7 @@ struct AudioView: View {
                 
                 HStack{
                     VStack (alignment: .leading){
-                        VStack (alignment: .leading, spacing: 0){
+                        VStack (alignment: .leading, spacing: UIDevice.current.userInterfaceIdiom == .phone ? 0 : 20){
                             Text(radioPlayer.itemMusic)
                                 .font(.custom("Spartan-Bold", size: 16))
                                 .foregroundColor(Color.black)
@@ -217,7 +211,7 @@ struct AudioView: View {
                             })
                             
                             Button(action:{
-                                
+                                openAirPlay()
                             }, label:{
                                 Image("btn_bluetooth")
                                     .resizable()
@@ -226,7 +220,8 @@ struct AudioView: View {
                             })
                             
                             Button(action:{
-                                
+                                let castButton = GCKUICastButton(frame: .zero)
+                                   castButton.sendActions(for: .touchUpInside)
                             }, label:{
                                 Image("btn_chromecast")
                                     .resizable()
@@ -254,8 +249,9 @@ struct AudioView: View {
                         Image("btn_return")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: geo.size.width * 0.25, height: geo.size.height * 0.1)
+                            .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.25 : geo.size.width * 0.15, height: geo.size.height * 0.1)
                     })
+                    .border(Color.red)
                     
                     Spacer()
                 }
@@ -269,6 +265,210 @@ struct AudioView: View {
             Color.white
                 .ignoresSafeArea(.all)
             
+            HStack{
+                Spacer()
+                
+                ZStack(alignment: .leading) {
+                    // Track Total (Cinza)
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: geo.size.width * 0.3, height: 5)
+                    
+                    Rectangle()
+                        .fill(Color(red: 26/255, green: 60/255, blue: 114/255))
+                        .frame(width: CGFloat(radioPlayer.volume) * (geo.size.width * 0.3), height: 5)
+                    
+                    // Botão (Thumb)
+                    Rectangle()
+                        .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
+                        .frame(width: 12, height: 20)
+                        .offset(x: CGFloat(radioPlayer.volume) * (geo.size.width * 0.3) - 6)
+                        .zIndex(1000)
+                    
+                    // Área de Toque Ampliada (Invisível)
+                    Rectangle()
+                        .fill(Color.white.opacity(0.001))
+                        .frame(width: geo.size.width * 0.3, height: 40)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { gesture in
+                                    let translation = gesture.location.x
+                                    let newVolume = Float(translation / (geo.size.width * 0.6))
+                                    radioPlayer.volume = max(0, min(1, newVolume))
+                                }
+                        )
+                }
+                .rotationEffect(.degrees(-45))
+                .offset(x: geo.size.width * 0.2, y: geo.size.height * -0.25)
+                .border(Color.pink)
+                
+                ZStack {
+                    Image("bg_song_cover_shadow_landscape")
+                        .resizable()
+                        .scaledToFit()
+                        .ignoresSafeArea(.all)
+                    
+                    AlbumArtworkView(
+                        artwork: radioPlayer.albumArtwork,
+                        maskImageName: "img_song_cover_landscape"
+                    )
+                    .scaledToFit()
+                    .ignoresSafeArea(.all)
+                }
+                .ignoresSafeArea(.all)
+            }
+            .ignoresSafeArea(.all)
+            
+            VStack{
+                HStack(alignment: .top){
+                    VStack (alignment: .leading, spacing: 30){
+                        VStack (alignment: .leading, spacing: 5){
+                            Text(radioPlayer.itemMusic)
+                                .font(.custom("Spartan-Bold", size: 16))
+                                .foregroundColor(Color.black)
+                            
+                            Text(radioPlayer.itemArtist)
+                                .font(.custom("Spartan-Regular", size: 16))
+                                .foregroundColor(Color.black)
+                        }
+                        
+                        HStack (spacing: 10){
+                            Image("ic_triangle_actions")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.04, height: geo.size.height * 0.06)
+                            
+                            Button(action:{
+                                withAnimation { showingPlaylistPicker = true }
+                            }, label:{
+                                Image("btn_add_playlist_active")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.1)
+                            })
+                            
+                            Button(action:{
+                                openAirPlay()
+                            }, label:{
+                                Image("btn_bluetooth")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.09)
+                            })
+                            
+                            Button(action:{
+                                let castButton = GCKUICastButton(frame: .zero)
+                                   castButton.sendActions(for: .touchUpInside)
+                            }, label:{
+                                Image("btn_chromecast")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.09)
+                            })
+                        }
+                        
+                        Image("bg_connected_device_card")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.15)
+                            .border(Color.yellow)
+                    }
+                    .padding(.top, 40)
+                    ZStack{
+                        Image("bg_volume")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.25, height: geo.size.height * 0.45, alignment: .leading)
+                            .rotationEffect(.degrees(90))
+                            .border(Color.yellow)
+                        
+                        HStack(alignment: .bottom, spacing: 2) {
+                            Text("\(Int(radioPlayer.volume * 100))")
+                                .font(.custom("Spartan-Regular", size: 28))
+                            Text("%")
+                                .font(.custom("Spartan-Regular", size: 12))
+                                .padding(.bottom, 5)
+                        }
+                        .foregroundColor(Color(red: 26/255, green: 60/255, blue: 114/255))
+                        .offset(y: geo.size.height * -0.15)
+                        .border(Color.yellow)
+                    }
+                    Spacer()
+                }
+                
+                Spacer()
+                
+                HStack{
+                    VStack{
+                        Spacer()
+                        Button(action:{
+                            router.goHome()
+                        }, label:{
+                            Image("btn_return")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.13, height: geo.size.height * 0.2)
+                                .border(Color.pink)
+                        })
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action:{
+                        
+                    }, label:{
+                        Image(radioPlayer.isPlaying ? "pause_landscape" : "bg_player_play_landscape")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.35)
+                            .border(Color.green)
+                    })
+                    .offset(x: geo.size.width * -0.1)
+                    
+                    Spacer()
+                    Spacer()
+                }
+            }
         }
     }
+    
+    private func openAirPlay() {
+            print("🔵 Abrindo seletor de dispositivos (AirPlay/Bluetooth)...")
+
+            // Força a sessão de áudio para playback
+            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try? AVAudioSession.sharedInstance().setActive(true, options: [])
+
+            // Simula o toque no AVRoutePickerView
+            DispatchQueue.main.async {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first {
+                    let routePicker = AVRoutePickerView()
+                    routePicker.prioritizesVideoDevices = false
+                    if #available(iOS 13.0, *) {
+                        routePicker.activeTintColor = .white
+                        routePicker.tintColor = .white
+                    }
+
+                    // Adiciona temporariamente à view
+                    window.addSubview(routePicker)
+                    routePicker.isHidden = true
+
+                    // Simula o toque
+                    for subview in routePicker.subviews {
+                        if let button = subview as? UIButton {
+                            button.sendActions(for: .touchUpInside)
+                            print("✅ Seletor de dispositivos aberto")
+                            break
+                        }
+                    }
+
+                    // Remove após um delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        routePicker.removeFromSuperview()
+                    }
+                }
+            }
+        }
 }

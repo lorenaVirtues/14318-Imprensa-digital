@@ -1,4 +1,5 @@
 import SwiftUI
+// import PhotosUI // Removed to avoid iOS 16+ dependencies if not needed elsewhere
 
 struct PlaylistView: View {
     @EnvironmentObject private var router: NavigationRouter
@@ -12,7 +13,11 @@ struct PlaylistView: View {
     
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            Color("azulEscuro")
+                .edgesIgnoringSafeArea(.bottom)
+            Color.white
+                .edgesIgnoringSafeArea(.top)
+            Color.white
             
             VStack(spacing: 0) {
                 // Header
@@ -96,16 +101,20 @@ struct PlaylistView: View {
                     .ignoresSafeArea()
                     .onTapGesture { showingCreateModal = false }
                 
-                CreatePlaylistModal(isEditing: isEditing, playlistName: isEditing ? (selectedPlaylist?.name ?? "") : "") { name in
-                    if isEditing, let id = selectedPlaylist?.id {
-                        playlistManager.updatePlaylist(id: id, name: name)
-                        // Update the local selected playlist to reflect change
+                CreatePlaylistModal(
+                    isEditing: isEditing,
+                    playlistName: isEditing ? (selectedPlaylist?.name ?? "") : "",
+                    initialImageUrl: isEditing ? selectedPlaylist?.imageUrl : nil
+                ) { name, imageUrl in
+                    if let id = selectedPlaylist?.id {
+                        playlistManager.updatePlaylist(id: id, name: name, imageUrl: imageUrl)
                         if var updated = selectedPlaylist {
                             updated.name = name
+                            if let img = imageUrl { updated.imageUrl = img }
                             selectedPlaylist = updated
                         }
                     } else {
-                        playlistManager.addPlaylist(name: name, imageUrl: nil)
+                        playlistManager.addPlaylist(name: name, imageUrl: imageUrl)
                     }
                     showingCreateModal = false
                 } onCancel: {
@@ -116,6 +125,7 @@ struct PlaylistView: View {
             }
         }
         .navigationBarHidden(true)
+        .preferredColorScheme(.light)
     }
     
     private var headerView: some View {
@@ -188,11 +198,13 @@ struct PlaylistRow: View {
                 
                 // Slanted Image Part
                 ZStack {
-                    Image("img_song_cover") // Placeholder or playlist image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 100, height: 90)
-                        .clipped()
+                    AlbumArtworkView(
+                        artworkURL: playlist.imageUrl ?? playlist.songs.first?.imageUrl,
+                        maskImageName: "img_playlist_cover",
+                        fallbackImageName: "img_playlist_cover"
+                    )
+                    .frame(width: 100, height: 90)
+                    .clipped()
                     
                     // Slant Overlay to transition to the blue title part
                     SlantShape()
@@ -270,6 +282,7 @@ struct PlaylistRow: View {
         }
         .frame(height: 90)
         .padding(.horizontal, 20)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -294,32 +307,141 @@ struct PlaylistDetailView: View {
     var onEdit: () -> Void
     
     var body: some View {
-        ZStack {
-            Color.white.ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header with Image
-                ZStack(alignment: .bottomLeading) {
-                    Image("img_song_cover") // Main playlist image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 300)
-                        .clipped()
-                    
-                    // Side Controls (as seen in image vertical bar)
-                    VStack(spacing: 20) {
-                        detailActionButton(icon: "arrow.counterclockwise") { onBack() }
-                        detailActionButton(icon: "pencil") { onEdit() }
-                        detailActionButton(icon: "trash") { onDelete() }
+        GeometryReader { geo in
+            ZStack {
+                Color.white.ignoresSafeArea()
+                
+                if geo.size.width > geo.size.height {
+                    landscapeView(geo: geo)
+                } else {
+                    portraitView(geo: geo)
+                }
+            }
+        }.preferredColorScheme(.light)
+    }
+    
+    @ViewBuilder
+    private func portraitView(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            // Header with Image
+            ZStack(alignment: .bottomLeading) {
+                AlbumArtworkView(
+                    artworkURL: playlist.imageUrl ?? playlist.songs.first?.imageUrl,
+                    maskImageName: "img_playlist_cover",
+                    fallbackImageName: "img_playlist_cover"
+                )
+                .frame(height: 300)
+                .clipped()
+                .padding(.leading, 40)
+                
+                // Side Controls (as seen in image vertical bar)
+                VStack(spacing: 20) {
+                    detailActionButton(icon: "arrow.counterclockwise") { onBack() }
+                    detailActionButton(icon: "pencil") { onEdit() }
+                    detailActionButton(icon: "trash") { onDelete() }
+                }
+                .padding(.leading, 20)
+                .padding(.bottom, 120)
+                
+                // Playlist Title Card
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(playlist.name)
+                            .font(.custom("Spartan-Bold", size: 22))
+                            .foregroundColor(.white)
+                        HStack(spacing: 5) {
+                            Image(systemName: "play.fill")
+                                .resizable()
+                                .frame(width: 8, height: 8)
+                            Text(playlist.date)
+                                .font(.custom("Spartan-Regular", size: 12))
+                        }
+                        .foregroundColor(.white.opacity(0.8))
                     }
                     .padding(.leading, 20)
-                    .padding(.bottom, 120)
                     
-                    // Playlist Title Card
+                    Spacer()
+                    
+                    Button(action: {}) {
+                        Image(systemName: "shuffle")
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 1))
+                    }
+                    
+                    Button(action: {
+                        if let firstSong = playlistManager.playlists.first(where: { $0.id == playlist.id })?.songs.first {
+                            ytPlayer.play(artist: firstSong.artist, song: firstSong.title)
+                        }
+                    }) {
+                        ZStack {
+                            Image(systemName: "play.fill")
+                                .resizable()
+                                .frame(width: 30, height: 35)
+                                .foregroundColor(.white)
+                            
+                            if ytPlayer.isLoading {
+                                LoadingView()
+                                    .scaleEffect(1.5)
+                            }
+                        }
+                    }
+                    .padding(.trailing, 20)
+                }
+                .frame(height: 100)
+                .background(Color(red: 26/255, green: 60/255, blue: 104/255))
+                .padding(.leading, 60)
+                .padding(.trailing, 20)
+                .offset(y: 50)
+            }
+            .ignoresSafeArea(edges: .top)
+            
+            // Song List
+            ScrollView {
+                VStack(spacing: 0) {
+                    if let currentPlaylist = playlistManager.playlists.first(where: { $0.id == playlist.id }) {
+                        if currentPlaylist.songs.isEmpty {
+                            Text("Nenhuma música na playlist")
+                                .foregroundColor(.gray)
+                                .padding(.top, 100)
+                        } else {
+                            ForEach(currentPlaylist.songs) { song in
+                                SongRow(song: song) {
+                                    playlistManager.removeSong(from: playlist.id, songId: song.id)
+                                }
+                                Divider().padding(.horizontal, 20)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 60)
+            }
+            .background(Color(red: 240/255, green: 240/255, blue: 240/255))
+            .padding(.top, 50)
+        }
+    }
+
+    @ViewBuilder
+    private func landscapeView(geo: GeometryProxy) -> some View {
+        HStack(spacing: 0) {
+            // Left Side: Image and Controls
+            VStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
+                    AlbumArtworkView(
+                        artworkURL: playlist.imageUrl ?? playlist.songs.first?.imageUrl,
+                        maskImageName: "img_playlist_cover",
+                        fallbackImageName: "img_playlist_cover"
+                    )
+                    .frame(width: geo.size.width * 0.45)
+                    .clipped()
+                    
+                    // Playlist Title Card Overlay
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(playlist.name)
-                                .font(.custom("Spartan-Bold", size: 22))
+                                .font(.custom("Spartan-Bold", size: 18))
                                 .foregroundColor(.white)
                             HStack(spacing: 5) {
                                 Image(systemName: "play.fill")
@@ -330,70 +452,58 @@ struct PlaylistDetailView: View {
                             }
                             .foregroundColor(.white.opacity(0.8))
                         }
-                        .padding(.leading, 20)
                         
                         Spacer()
                         
-                        Button(action: {}) {
-                            Image(systemName: "shuffle")
-                                .resizable()
-                                .frame(width: 20, height: 20)
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 1))
-                        }
+                        Image(systemName: "music.note.list")
+                            .foregroundColor(.white)
+                            .font(.title2)
                         
-                        Button(action: {
-                            if let firstSong = playlistManager.playlists.first(where: { $0.id == playlist.id })?.songs.first {
-                                ytPlayer.play(artist: firstSong.artist, song: firstSong.title)
-                            }
-                        }) {
-                            ZStack {
-                                Image(systemName: "play.fill")
-                                    .resizable()
-                                    .frame(width: 30, height: 35)
-                                    .foregroundColor(.white)
-                                
-                                if ytPlayer.isLoading {
-                                    LoadingView()
-                                        .scaleEffect(1.5)
-                                }
-                            }
-                        }
-                        .padding(.trailing, 20)
+                        Image(systemName: "play.fill")
+                            .resizable()
+                            .frame(width: 20, height: 25)
+                            .foregroundColor(.white)
+                            .padding(.leading, 10)
                     }
-                    .frame(height: 100)
+                    .padding()
+                    .frame(height: 80)
+                    .background(Color(red: 26/255, green: 104/255, blue: 130/255).opacity(0.9)) // Lighter blue/teal as in art? No, it's dark blue.
                     .background(Color(red: 26/255, green: 60/255, blue: 104/255))
-                    .padding(.leading, 60)
-                    .padding(.trailing, 20)
-                    .offset(y: 50)
+                    .padding(.horizontal, 10)
+                    .offset(y: 20)
                 }
-                .ignoresSafeArea(edges: .top)
+                .frame(height: geo.size.height * 0.75)
                 
-                // Song List
+                Spacer()
+                
+                // Bottom row buttons
+                HStack(spacing: 30) {
+                    detailActionButton(icon: "arrow.counterclockwise") { onBack() }
+                    detailActionButton(icon: "pencil") { onEdit() }
+                    detailActionButton(icon: "trash") { onDelete() }
+                }
+                .padding(.bottom, 20)
+            }
+            .frame(width: geo.size.width * 0.45)
+            
+            // Right Side: Song List
+            VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // Get the latest songs from the manager to ensure they exist/refresh
+                    VStack(spacing: 1) {
                         if let currentPlaylist = playlistManager.playlists.first(where: { $0.id == playlist.id }) {
-                            if currentPlaylist.songs.isEmpty {
-                                Text("Nenhuma música na playlist")
-                                    .foregroundColor(.gray)
-                                    .padding(.top, 100)
-                            } else {
-                                ForEach(currentPlaylist.songs) { song in
-                                    SongRow(song: song) {
-                                        playlistManager.removeSong(from: playlist.id, songId: song.id)
-                                    }
-                                    Divider().padding(.horizontal, 20)
+                            ForEach(currentPlaylist.songs) { song in
+                                SongRow(song: song) {
+                                    playlistManager.removeSong(from: playlist.id, songId: song.id)
                                 }
+                                Divider().padding(.horizontal, 20)
                             }
                         }
                     }
-                    .padding(.top, 60)
+                    .padding(.vertical, 20)
                 }
-                .background(Color(red: 240/255, green: 240/255, blue: 240/255))
-                .padding(.top, 50)
             }
+            .frame(maxWidth: .infinity)
+            .background(Color(red: 245/255, green: 245/255, blue: 245/255))
         }
     }
     
@@ -424,147 +534,189 @@ struct SongRow: View {
             Rectangle()
                 .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
                 .frame(width: 4)
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
             
             HStack(spacing: 15) {
-                // Vinyl Icon or Album Art
-                ZStack {
-                    Circle().fill(Color.gray.opacity(0.1))
-                    Image(systemName: "record.circle")
-                        .resizable()
-                        .frame(width: 45, height: 45)
-                        .foregroundColor(.gray)
-                }
-                .frame(width: 60, height: 60)
-                .padding(.leading, 15)
+                // Album Art
+                AlbumArtworkView(
+                    artworkURL: song.imageUrl,
+                    maskImageName: "Polygon 12",
+                    fallbackImageName: "Polygon 12"
+                )
+                .frame(width: 55, height: 55)
+                .padding(.leading, 12)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title)
-                        .font(.custom("Spartan-Bold", size: 16))
+                        .font(.custom("Spartan-Bold", size: 15))
                         .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                     Text(song.artist)
-                        .font(.custom("Spartan-Regular", size: 14))
-                        .foregroundColor(.gray)
+                        .font(.custom("Spartan-Regular", size: 13))
+                        .foregroundColor(.black.opacity(0.8))
                     Text(song.date)
                         .font(.custom("Spartan-Regular", size: 10))
-                        .foregroundColor(.gray.opacity(0.6))
+                        .foregroundColor(.gray)
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     Button(action: onRemove) {
                         Image(systemName: "minus.square")
-                            .font(.title2)
+                            .font(.title3)
                             .foregroundColor(.gray)
                     }
                     Button(action: {}) {
                         Image(systemName: "plus.square")
-                            .font(.title2)
+                            .font(.title3)
                             .foregroundColor(.gray)
                     }
                     Button(action: {
                         ytPlayer.play(artist: song.artist, song: song.title)
                     }) {
                         ZStack {
+                            // Slanted/Triangle play button as in art
                             Image(systemName: "play.fill")
                                 .resizable()
-                                .frame(width: 20, height: 25)
+                                .frame(width: 18, height: 24)
                                 .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                             
                             if ytPlayer.isLoading && ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) {
                                 ProgressView()
-                                    .scaleEffect(0.8)
+                                    .scaleEffect(0.7)
                             }
                         }
                     }
+                    .padding(.trailing, 10)
                 }
-                .padding(.trailing, 10)
             }
         }
-        .frame(height: 90)
+        .frame(height: 85)
         .background(Color.white)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 15)
+        .preferredColorScheme(.light)
     }
 }
 
 // MARK: - Create Playlist Modal
 struct CreatePlaylistModal: View {
+    @EnvironmentObject private var playlistManager: PlaylistManager
     var isEditing: Bool
     @State var playlistName: String
-    var onSave: (String) -> Void
+    var initialImageUrl: String? = nil
+    var onSave: (String, String?) -> Void
     var onCancel: () -> Void
+    
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage? = nil
+    @State private var currentImageUrl: String? = nil
     
     var body: some View {
         VStack(spacing: 20) {
-            HStack {
-                Image(systemName: "music.note.list")
+            HStack(spacing: 10) {
+                Image(systemName: "plus.square.on.square")
+                    .font(.system(size: 18, weight: .bold))
                 Text(isEditing ? "EDITAR PLAYLIST" : "CRIAR PLAYLIST")
                     .font(.custom("Spartan-Bold", size: 20))
             }
             .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
-            .padding(.top, 20)
+            .padding(.top, 25)
             
-            // Image Placeholder
+            // Image Placeholder area
             ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(height: 150)
+                    .fill(Color(red: 235/255, green: 235/255, blue: 235/255))
+                    .frame(height: 180)
                 
-                Image(systemName: "photo.on.rectangle")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80)
-                    .foregroundColor(.gray.opacity(0.5))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let img = selectedImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 180)
+                        .clipped()
+                        .cornerRadius(5)
+                } else if let url = currentImageUrl {
+                    AlbumArtworkView(artworkURL: url, maskImageName: "img_playlist_cover", fallbackImageName: "img_playlist_cover")
+                        .frame(height: 180)
+                } else {
+                    Image(systemName: "photo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100)
+                        .foregroundColor(Color.gray)
+                        .offset(x: -90, y: -50)
+                }
                 
-                Button(action: {}) {
+                Button(action: {
+                    showingImagePicker = true
+                }) {
                     Image(systemName: "pencil")
-                        .padding(8)
+                        .font(.system(size: 16, weight: .bold))
+                        .padding(10)
                         .background(Color(red: 26/255, green: 60/255, blue: 104/255))
                         .foregroundColor(.white)
-                        .cornerRadius(5)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(10)
+            }
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(image: $selectedImage)
+            }
+            .onAppear {
+                currentImageUrl = initialImageUrl
             }
             .padding(.horizontal, 20)
             
             TextField("Nome da Playlist....", text: $playlistName)
+                .font(.custom("Spartan-Regular", size: 14))
                 .padding()
-                .background(RoundedRectangle(cornerRadius: 5).stroke(Color.gray.opacity(0.5)))
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.gray.opacity(0.6), lineWidth: 1.5)
+                )
                 .padding(.horizontal, 20)
             
             HStack(spacing: 15) {
                 Button(action: onCancel) {
                     Text("CANCELAR")
                         .font(.custom("Spartan-Bold", size: 14))
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.gray.opacity(0.5)))
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color(red: 26/255, green: 60/255, blue: 104/255), lineWidth: 1.5)
+                        )
                 }
                 
                 Button(action: {
                     if !playlistName.isEmpty {
-                        onSave(playlistName)
+                        var savedPath: String? = currentImageUrl
+                        if let img = selectedImage {
+                            savedPath = playlistManager.saveImageToDisk(image: img)
+                        }
+                        onSave(playlistName, savedPath)
                     }
                 }) {
                     Text(isEditing ? "SALVAR" : "CRIAR PLAYLIST")
                         .font(.custom("Spartan-Bold", size: 14))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(.vertical, 14)
                         .background(Color(red: 26/255, green: 60/255, blue: 104/255))
                         .cornerRadius(5)
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 20)
+            .padding(.bottom, 25)
         }
         .frame(width: 320)
         .background(Color.white)
-        .cornerRadius(10)
-        .shadow(radius: 20)
+        .cornerRadius(1) // Reference looks very sharp, almost no corner radius on border
+        .border(Color(red: 26/255, green: 60/255, blue: 104/255), width: 3)
+        .shadow(color: .black.opacity(0.3), radius: 20)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -656,8 +808,8 @@ struct PlaylistPickerSheet: View {
                     .ignoresSafeArea()
                     .zIndex(2)
                 
-                CreatePlaylistModal(isEditing: false, playlistName: "", onSave: { name in
-                    playlistManager.addPlaylist(name: name, imageUrl: nil)
+                CreatePlaylistModal(isEditing: false, playlistName: "", onSave: { name, imageUrl in
+                    playlistManager.addPlaylist(name: name, imageUrl: imageUrl)
                     showingCreateModal = false
                 }, onCancel: {
                     showingCreateModal = false
@@ -665,7 +817,7 @@ struct PlaylistPickerSheet: View {
                 .transition(.scale)
                 .zIndex(3)
             }
-        }
+        }.preferredColorScheme(.light)
     }
 }
 
@@ -678,20 +830,12 @@ struct PlaylistPickerRow: View {
             HStack(spacing: 0) {
                 // Image section with slant
                 ZStack(alignment: .trailing) {
-                    if let firstSong = playlist.songs.first, let imgUrl = firstSong.imageUrl, let url = URL(string: imgUrl) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color.gray.opacity(0.2)
-                        }
-                        .frame(width: 70, height: 50)
-                    } else {
-                        Image("img_playlist_placeholder") // Use a placeholder if you have one
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 70, height: 50)
-                            .background(Color.gray.opacity(0.3))
-                    }
+                    AlbumArtworkView(
+                        artworkURL: playlist.imageUrl ?? playlist.songs.first?.imageUrl,
+                        maskImageName: "Polygon 12",
+                        fallbackImageName: "Polygon 12"
+                    )
+                    .frame(width: 70, height: 50)
                     
                     SlantShape()
                         .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
@@ -722,6 +866,39 @@ struct PlaylistPickerRow: View {
             .frame(height: 50)
             .background(Color(red: 26/255, green: 60/255, blue: 104/255))
             .cornerRadius(5)
+        }.preferredColorScheme(.light)
+    }
+}
+
+// MARK: - Legacy Image Picker
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.presentationMode) var presentationMode
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ImagePicker
+
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.image = uiImage
+            }
+            parent.presentationMode.wrappedValue.dismiss()
         }
     }
 }

@@ -246,9 +246,152 @@ struct MenuView: View {
 
     @ViewBuilder
     private func landscape(geo: GeometryProxy) -> some View {
-        ZStack{
+        ZStack {
             Color.white
                 .ignoresSafeArea(.all)
+            
+            VStack(spacing: 0){
+                HStack(alignment: .bottom){
+                    if dataController.minimalMode {
+                        Image("logo")
+                              .resizable()
+                              .scaledToFit()
+                              .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                    } else {
+                        LottieView(animationName: "logotipo")
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
+                            .scaleEffect(2.3)
+                    }
+                   
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 5){
+                        HeaderDateTimeView()
+                    }
+                }
+                .padding(.top, 10)
+               
+                Divider()
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                
+                // Navigation Bar
+                HStack{
+                    Button(action:{
+                        router.goHome()
+                    }, label:{
+                        Image("btn_nav_home_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                    })
+                    
+                    Spacer()
+                    
+                    Button(action:{
+                        router.go(to: .audio)
+                    }, label:{
+                        Image("btn_nav_audio_player_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                    })
+                    
+                    Spacer()
+                    
+                    Button(action:{
+                        router.go(to: .config)
+                    }, label:{
+                        Image("btn_nav_settings_default")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
+                    })
+                    
+                    Spacer()
+                    
+                    Image("btn_nav_menu_active")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.15, height: geo.size.height * 0.1)
+                        
+                    
+                    Spacer()
+                    
+                    Image("bg_triangle_nav_buttons")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.04, height: geo.size.height * 0.08)
+                }
+                .padding(.horizontal, 20)
+                
+                Divider()
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        // SOBRE O APP Section
+                        MenuSection(title: "SOBRE O APP") {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                MenuItem(icon: "btn_menu_contact") { router.go(to: .contato) }
+                                MenuItem(icon: "btn_menu_rate") { avaliarApp() }
+                                MenuItem(icon: "btn_menu_about_us") { router.go(to: .sobre) }
+                                MenuItem(icon: "btn_menu_terms") { showTermos = true }
+                                MenuItem(icon: "btn_menu_share") { showCompartilhar = true }
+                            }
+                            .padding()
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // REDES SOCIAIS Section
+                        MenuSection(title: "REDES SOCIAIS") {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                MenuItem(icon: "btn_menu_whatsapp") { openWhatsapp() }
+                                MenuItem(icon: "btn_menu_facebook") { openFacebook() }
+                                MenuItem(icon: "btn_menu_instagram") { openInstagram() }
+                                MenuItem(icon: "btn_menu_youtube") { openYoutube() }
+                                MenuItem(icon: "btn_menu_website") { showSite = true }
+                            }
+                            .padding()
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // PAREAMENTO Section
+                        MenuSection(title: "PAREAMENTO") {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                MenuItem(icon: "btn_menu_bluetooth") { openAirPlay() }
+                                MenuItem(icon: "btn_menu_chromecast") {   let castButton = GCKUICastButton(frame: .zero)
+                                    castButton.sendActions(for: .touchUpInside) }
+                            }
+                            .padding()
+                        }
+                        
+                        Divider()
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 10)
+                        
+                        // IR PARA Section
+                        MenuSection(title: "IR PARA") {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                                MenuItem(icon: "btn_menu_playlists") { router.go(to: .playlist) }
+                                MenuItem(icon: "btn_menu_weather") { router.go(to: .clima) }
+                            }
+                            .padding()
+                        }
+                    }
+                    .padding(20)
+                }
+            }
         }
     }
     
