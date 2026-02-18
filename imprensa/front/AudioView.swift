@@ -112,7 +112,6 @@ struct AudioView: View {
                     }
                     .rotationEffect(.degrees(-135))
                     .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? -geo.size.width * 0.15 : -geo.size.width * 0.2, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.18 : geo.size.height * 0.0)
-                    .border(Color.pink)
                 }.ignoresSafeArea(.all)
                 Spacer()
             }
@@ -134,9 +133,7 @@ struct AudioView: View {
                         }
                         .foregroundColor(Color(red: 26/255, green: 60/255, blue: 114/255))
                         .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? -8 : -50)
-                        .border(Color.yellow)
                     }
-                    .border(Color.green)
                     .offset(x: geo.size.width * 0.0, y: geo.size.height * 0.22)
                   
                     
@@ -251,7 +248,6 @@ struct AudioView: View {
                             .scaledToFit()
                             .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.25 : geo.size.width * 0.15, height: geo.size.height * 0.1)
                     })
-                    .border(Color.red)
                     
                     Spacer()
                 }
@@ -272,23 +268,23 @@ struct AudioView: View {
                     // Track Total (Cinza)
                     Rectangle()
                         .fill(Color.gray.opacity(0.3))
-                        .frame(width: geo.size.width * 0.3, height: 5)
+                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4, height: 5)
                     
                     Rectangle()
                         .fill(Color(red: 26/255, green: 60/255, blue: 114/255))
-                        .frame(width: CGFloat(radioPlayer.volume) * (geo.size.width * 0.3), height: 5)
+                        .frame(width: CGFloat(radioPlayer.volume) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4), height: 5)
                     
                     // Botão (Thumb)
                     Rectangle()
                         .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
                         .frame(width: 12, height: 20)
-                        .offset(x: CGFloat(radioPlayer.volume) * (geo.size.width * 0.3) - 6)
+                        .offset(x: CGFloat(radioPlayer.volume) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4) - 6)
                         .zIndex(1000)
                     
                     // Área de Toque Ampliada (Invisível)
                     Rectangle()
                         .fill(Color.white.opacity(0.001))
-                        .frame(width: geo.size.width * 0.3, height: 40)
+                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4, height: 40)
                         .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 0)
@@ -300,21 +296,22 @@ struct AudioView: View {
                         )
                 }
                 .rotationEffect(.degrees(-45))
-                .offset(x: geo.size.width * 0.2, y: geo.size.height * -0.25)
-                .border(Color.pink)
+                .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.2 : geo.size.width * 0.3, y: geo.size.height * -0.25)
                 
                 ZStack {
                     Image("bg_song_cover_shadow_landscape")
                         .resizable()
                         .scaledToFit()
                         .ignoresSafeArea(.all)
+                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1)
                     
                     AlbumArtworkView(
                         artwork: radioPlayer.albumArtwork,
-                        maskImageName: "img_song_cover_landscape"
+                        maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_song_cover_landscape" : "forma_capa_de_album_landscape_ipad"
                     )
                     .scaledToFit()
                     .ignoresSafeArea(.all)
+                    .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1)
                 }
                 .ignoresSafeArea(.all)
             }
@@ -325,11 +322,11 @@ struct AudioView: View {
                     VStack (alignment: .leading, spacing: 30){
                         VStack (alignment: .leading, spacing: 5){
                             Text(radioPlayer.itemMusic)
-                                .font(.custom("Spartan-Bold", size: 16))
+                                .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 16 : 20))
                                 .foregroundColor(Color.black)
                             
                             Text(radioPlayer.itemArtist)
-                                .font(.custom("Spartan-Regular", size: 16))
+                                .font(.custom("Spartan-Regular", size: UIDevice.current.userInterfaceIdiom == .phone ? 16 : 20))
                                 .foregroundColor(Color.black)
                         }
                         
@@ -345,7 +342,7 @@ struct AudioView: View {
                                 Image("btn_add_playlist_active")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.1)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.09 : geo.size.width * 0.07, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.08)
                             })
                             
                             Button(action:{
@@ -354,7 +351,7 @@ struct AudioView: View {
                                 Image("btn_bluetooth")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.09)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.09 : geo.size.width * 0.07, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.08)
                             })
                             
                             Button(action:{
@@ -364,7 +361,7 @@ struct AudioView: View {
                                 Image("btn_chromecast")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.09, height: geo.size.height * 0.09)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.09 : geo.size.width * 0.07, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.08)
                             })
                         }
                         
@@ -372,16 +369,16 @@ struct AudioView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.15)
-                            .border(Color.yellow)
                     }
                     .padding(.top, 40)
+                    .padding(.leading)
+                    
                     ZStack{
                         Image("bg_volume")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: geo.size.width * 0.25, height: geo.size.height * 0.45, alignment: .leading)
+                            .frame(width: geo.size.width * 0.25, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.45 : geo.size.height * 0.35, alignment: .leading)
                             .rotationEffect(.degrees(90))
-                            .border(Color.yellow)
                         
                         HStack(alignment: .bottom, spacing: 2) {
                             Text("\(Int(radioPlayer.volume * 100))")
@@ -392,7 +389,6 @@ struct AudioView: View {
                         }
                         .foregroundColor(Color(red: 26/255, green: 60/255, blue: 114/255))
                         .offset(y: geo.size.height * -0.15)
-                        .border(Color.yellow)
                     }
                     Spacer()
                 }
@@ -408,8 +404,7 @@ struct AudioView: View {
                             Image("btn_return")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: geo.size.width * 0.13, height: geo.size.height * 0.2)
-                                .border(Color.pink)
+                                .frame(width: geo.size.width * 0.13, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.2 : geo.size.height * 0.15)
                         })
                     }
                     
@@ -421,10 +416,9 @@ struct AudioView: View {
                         Image(radioPlayer.isPlaying ? "pause_landscape" : "bg_player_play_landscape")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.35)
-                            .border(Color.green)
+                            .frame(width: geo.size.width * 0.4, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.35 : geo.size.height * 0.25)
                     })
-                    .offset(x: geo.size.width * -0.1)
+                    .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * -0.1 : geo.size.width * 0.0, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * 0.1)
                     
                     Spacer()
                     Spacer()

@@ -39,6 +39,7 @@ struct ClimaView: View {
                 Image(weatherSvc.condition?.assetName.replacingOccurrences(of: "ic_", with: "img_weather_background_") ?? "img_weather_background_sunny")
                     .resizable()
                     .scaledToFit()
+                    .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.0 : geo.size.height * -0.1)
                 Spacer()
             }
 
@@ -88,7 +89,6 @@ struct ClimaView: View {
                     .frame(width: 250, height: 300)
                     .rotationEffect(.degrees(90))
                     .ignoresSafeArea(.all)
-                    .border(Color.green)
             }
             .ignoresSafeArea(.all)
             
@@ -291,7 +291,7 @@ struct ClimaView: View {
                 Image(weatherSvc.condition?.assetName ?? "ic_sunny")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: geo.size.width * 0.45)
+                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.45 : geo.size.width * 0.3)
                     .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
                 
                 Spacer()
@@ -299,19 +299,19 @@ struct ClimaView: View {
                 VStack(alignment: .trailing, spacing: 0) {
                     HStack(alignment: .top, spacing: 0) {
                         Text("\(weatherSvc.currentTemp ?? 0)")
-                            .font(.custom("Spartan-Bold", size: 50))
+                            .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 50 : 70))
                             .foregroundColor(.white)
                         
                         VStack(alignment: .leading, spacing: 5) {
                             Text("°C")
-                                .font(.custom("Spartan-Bold", size: 20))
+                                .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 20 : 40))
                                 .foregroundColor(.white)
                                 .padding(.top, 15)
                         }
                     }
                     
                     Text(weatherSvc.condition?.description ?? "—")
-                        .font(.custom("Spartan-Bold", size: 14))
+                        .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 14 : 20))
                         .foregroundColor(.white)
                     
                     HStack {
@@ -326,7 +326,7 @@ struct ClimaView: View {
                         Text("\(weatherSvc.minTemp ?? 0)°")
                             .foregroundColor(.white)
                     }
-                    .font(.custom("Spartan-Bold", size: 12))
+                    .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 12 : 16))
                 }
             }
             .padding(.horizontal)

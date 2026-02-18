@@ -24,6 +24,8 @@ struct PrincipalView: View {
     @State private var showTiktok = false
     @State private var showYoutube = false
     @State private var showTiktokAlert = false
+    @State private var showMuteAlert = false
+    @State private var muteAlertMessage = ""
     
     let height = UIScreen.main.bounds.size.height
     let width = UIScreen.main.bounds.size.width
@@ -95,6 +97,13 @@ struct PrincipalView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert(isPresented: $showMuteAlert) {
+            Alert(
+                title: Text("Rádio"),
+                message: Text(muteAlertMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .onReceive(dataController.$appData) { appData in
             if let streaming = appData?.app.radios.first?.streaming {
                 let model = RadioModel(streamUrl: streaming)
@@ -148,7 +157,6 @@ struct PrincipalView: View {
                                   .resizable()
                                   .scaledToFit()
                                   .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
-                                  .border(Color.yellow)
                         } else {
                             LottieView(animationName: "logotipo")
                                 .scaledToFit()
@@ -234,7 +242,7 @@ struct PrincipalView: View {
                     .padding(.top, 5)
                     
                     bannerView(webView: banner.webView)
-                        .frame(width: geo.size.width * 0.8, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.08)
+                        .frame(width: geo.size.width * 0.8, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.15)
                         .padding(UIDevice.current.userInterfaceIdiom == .phone ? 5 : 10)
                     
                     Divider()
@@ -275,13 +283,27 @@ struct PrincipalView: View {
                                         })
                                         
                                         Button(action:{
-                                            
+                                            radioPlayer.toggleMute()
+                                            muteAlertMessage = radioPlayer.isMuted ? "Rádio Mutada" : "Rádio Desmutada"
+                                            showMuteAlert = true
                                         }, label:{
                                             Image("btn_mute")
                                                 .resizable()
                                                 .scaledToFit()
                                                 .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                         })
+                                        
+                                        Button(action:{
+                                          
+                                        }, label:{
+                                            Image("icone_comandos")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                        })
+                                        
                                     }
                                     .padding(10)
                                     
@@ -347,15 +369,16 @@ struct PrincipalView: View {
                                         .scaledToFit()
                                         .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.32)
                                         .scaleEffect(1.1)
+                                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.07, y: geo.size.height * -0.0)
                                     
                                     ZStack {
                                         AlbumArtworkView(
                                             artwork: radioPlayer.albumArtwork,
                                             maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
                                         )
-                                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.45, height: geo.size.height * 0.35)
+                                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.35, height: geo.size.height * 0.35)
                                         .scaleEffect(1.1)
-                                        .offset(y: geo.size.height * -0.02)
+                                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1, y: geo.size.height * -0.02)
                                         
                                         
                                         if dataController.minimalMode {
@@ -395,7 +418,7 @@ struct PrincipalView: View {
                             LottieView(animationName: "logotipo")
                                 .scaledToFit()
                                 .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
-                                .scaleEffect(2.3)
+                                .scaleEffect(UIDevice.current.userInterfaceIdiom == .phone ? 2.3 : 2.0)
                         }
                        
                         Spacer()
@@ -415,7 +438,6 @@ struct PrincipalView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: geo.size.width * 0.15, height: geo.size.height * 0.1)
-                            .border(Color.red)
                         
                         Spacer()
                         
@@ -426,7 +448,6 @@ struct PrincipalView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.1)
-                                .border(Color.red)
                         })
                         
                         Spacer()
@@ -477,7 +498,7 @@ struct PrincipalView: View {
                     .padding(.vertical, 10)
                     
                     bannerView(webView: banner.webView)
-                        .frame(width: geo.size.width * 0.4, height: geo.size.height * 0.08)
+                        .frame(width: geo.size.width * 0.4, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.12)
                         .padding(5)
                     
                     Divider()
@@ -511,12 +532,27 @@ struct PrincipalView: View {
                                         .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
                                 }
                                 
-                                Button(action: { }) {
+                                Button(action: {
+                                    radioPlayer.toggleMute()
+                                    muteAlertMessage = radioPlayer.isMuted ? "Rádio Mutada" : "Rádio Desmutada"
+                                    showMuteAlert = true
+                                }) {
                                     Image("btn_mute")
                                         .resizable()
                                         .scaledToFit()
                                         .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                        .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                 }
+                                
+                                Button(action:{
+                                  
+                                }, label:{
+                                    Image("icone_comandos")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                        .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                })
                                 
                                 Button(action: {
                                     if radioPlayer.isPlaying { radioPlayer.stop() }
@@ -550,16 +586,15 @@ struct PrincipalView: View {
                        
                     }
                     HStack {
-                        
                         Button(action: {
                             showSocialFeed = true
                         }) {
                             Image("btn_expand_social_media")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: geo.size.width * 0.2, height: geo.size.height * 0.2)
+                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.2 : geo.size.width * 0.15, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.2 : geo.size.height * 0.15)
                         }
-                        .offset(y: geo.size.height * 0.1)
+                        .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.2)
                         
                         Spacer()
                         ZStack{
@@ -568,7 +603,6 @@ struct PrincipalView: View {
                                 .scaledToFit()
                                 .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.5)
                                 .scaleEffect(1.1)
-                                .border(Color.green)
                                 .offset(x: geo.size.width * 0.1)
                             
                             ZStack {
@@ -578,7 +612,6 @@ struct PrincipalView: View {
                                 )
                                 .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.35 : geo.size.width * 0.45, height: geo.size.height * 0.55)
                                 .scaleEffect(1.1)
-                                .border(Color.blue)
                                 .offset(x: geo.size.width * 0.1, y: geo.size.height * -0.01)
                                 
                                 

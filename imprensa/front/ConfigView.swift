@@ -187,7 +187,6 @@ struct ConfigView: View {
                               .resizable()
                               .scaledToFit()
                               .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
-                              .border(Color.yellow)
                     } else {
                         LottieView(animationName: "logotipo")
                             .scaledToFit()
@@ -425,7 +424,7 @@ struct ConfigView: View {
                                Image("btn_apply_changes")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(width: geo.size.width * 0.4)
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3)
                             }
                             
                             Button(action: {
@@ -434,7 +433,7 @@ struct ConfigView: View {
                                 Image("btn_reset_default") // Usando o botão como 'Opção Avançado' visualmente ou substituindo se houver imagem específica
                                      .resizable()
                                      .scaledToFit()
-                                     .frame(width: geo.size.width * 0.4)
+                                     .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3)
                                      
                             }
                         }
@@ -463,7 +462,7 @@ struct ConfigView: View {
                         LottieView(animationName: "logotipo")
                             .scaledToFit()
                             .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.2)
-                            .scaleEffect(2.3)
+                            .scaleEffect(UIDevice.current.userInterfaceIdiom == .phone ? 2.3 : 2.0)
                     }
                    
                     Spacer()

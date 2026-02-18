@@ -68,7 +68,23 @@ class RadioPlayer: NSObject, ObservableObject {
     
     @Published var volume: Float = 1.0 {
         didSet {
-            player?.volume = volume
+            if !isMuted {
+                player?.volume = volume
+            }
+        }
+    }
+    
+    @Published var isMuted: Bool = false
+    private var lastVolumeBeforeMute: Float = 1.0
+    
+    func toggleMute() {
+        isMuted.toggle()
+        if isMuted {
+            lastVolumeBeforeMute = volume
+            player?.volume = 0
+        } else {
+            player?.volume = lastVolumeBeforeMute
+            volume = lastVolumeBeforeMute
         }
     }
     

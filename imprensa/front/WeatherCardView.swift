@@ -12,7 +12,6 @@ struct WeatherCardView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: width * 0.8, height: height * 0.9, alignment: .top)
-                .border(Color.red)
             
             // Content Overlay
             HStack {
