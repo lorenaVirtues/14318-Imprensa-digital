@@ -10,6 +10,7 @@ struct PrincipalView: View {
     @EnvironmentObject var weatherSvc: WeatherService
     @EnvironmentObject private var linkHandler: LinkHandler
     @EnvironmentObject var launchTracker: LaunchTracker
+    @EnvironmentObject private var speechManager: SpeechManager
     
     @StateObject private var banner = Banner(radio: "11069")
     
@@ -89,6 +90,21 @@ struct PrincipalView: View {
         .onAppear {
             dataController.parseAppData()
             fetchWeatherIfPossible()
+            
+            speechManager.onCommandAction = { command in
+                switch command {
+                case "tocar":
+                    if !radioPlayer.isPlaying {
+                        radioPlayer.play(self.radio)
+                    }
+                case "parar":
+                    if radioPlayer.isPlaying {
+                        radioPlayer.stop()
+                    }
+                default:
+                    break
+                }
+            }
         }
         .alert(isPresented: $showTiktokAlert) {
             Alert(
@@ -177,7 +193,7 @@ struct PrincipalView: View {
                                     .scaledToFit()
                                     .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
                             })
-                        }
+                        }.padding(.trailing)
                     }
                     .padding(10)
                    
@@ -239,10 +255,11 @@ struct PrincipalView: View {
                     BannerCarouselView(geo: geo) { bannerName in
                         handleBannerTap(bannerName)
                     }
+                    .frame(width: geo.size.width * 0.9)
                     .padding(.top, 5)
                     
                     bannerView(webView: banner.webView)
-                        .frame(width: geo.size.width * 0.8, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.15)
+                        .frame(width: geo.size.width * 0.9, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.12 : geo.size.height * 0.15)
                         .padding(UIDevice.current.userInterfaceIdiom == .phone ? 5 : 10)
                     
                     Divider()
@@ -295,13 +312,23 @@ struct PrincipalView: View {
                                         })
                                         
                                         Button(action:{
-                                          
+                                            let metadata = "Você está ouvindo \(radioPlayer.itemMusic) de \(radioPlayer.itemArtist)"
+                                            speechManager.speakAndListen(metadata: metadata)
                                         }, label:{
-                                            Image("icone_comandos")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
-                                                .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                            ZStack {
+                                                Image("icone_comandos")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                    .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                                
+                                                if speechManager.isListening {
+                                                    Circle()
+                                                        .stroke(Color.red, lineWidth: 2)
+                                                        .frame(width: geo.size.width * 0.09)
+                                                        .scaleEffect(1.2)
+                                                }
+                                            }
                                         })
                                         
                                     }
@@ -362,36 +389,40 @@ struct PrincipalView: View {
                             Spacer()
                             VStack {
                                 Spacer()
-                                
-                                ZStack{
-                                    Image("bg_main_song_cover_shadow")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.32)
-                                        .scaleEffect(1.1)
-                                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.07, y: geo.size.height * -0.0)
-                                    
-                                    ZStack {
-                                        AlbumArtworkView(
-                                            artwork: radioPlayer.albumArtwork,
-                                            maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
-                                        )
-                                        .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.35, height: geo.size.height * 0.35)
-                                        .scaleEffect(1.1)
-                                        .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1, y: geo.size.height * -0.02)
+                                Button(action:{
+                                    router.go(to: .audio)
+                                }, label:{
+                                    ZStack{
+                                        Image("bg_main_song_cover_shadow")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.32)
+                                            .scaleEffect(1.1)
+                                            .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.07, y: geo.size.height * -0.0)
                                         
-                                        
-                                        if dataController.minimalMode {
-                                           
-                                        } else {
-                                            LottieView(animationName: "traco_capa_de_album_principal")
-                                                .scaledToFill()
-                                                .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.35)
-                                                .scaleEffect(1.3)
-                                                .offset(x: geo.size.width * 0.17, y: geo.size.height * 0.01)
+                                        ZStack {
+                                            AlbumArtworkView(
+                                                artwork: radioPlayer.albumArtwork,
+                                                maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
+                                            )
+                                            .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.35, height: geo.size.height * 0.35)
+                                            .scaleEffect(1.1)
+                                            .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1, y: geo.size.height * -0.02)
+                                            
+                                            
+                                            if dataController.minimalMode {
+                                               
+                                            } else {
+                                                LottieView(animationName: "traco_capa_de_album_principal")
+                                                    .scaledToFill()
+                                                    .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.35)
+                                                    .scaleEffect(1.3)
+                                                    .offset(x: geo.size.width * 0.17, y: geo.size.height * 0.01)
+                                            }
                                         }
                                     }
-                                }
+                                })
+                                
                             }
                         }
                     }
@@ -498,7 +529,7 @@ struct PrincipalView: View {
                     .padding(.vertical, 10)
                     
                     bannerView(webView: banner.webView)
-                        .frame(width: geo.size.width * 0.4, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.12)
+                        .frame(width: geo.size.width * 0.4, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.2 : geo.size.height * 0.12)
                         .padding(5)
                     
                     Divider()
@@ -545,13 +576,23 @@ struct PrincipalView: View {
                                 }
                                 
                                 Button(action:{
-                                  
+                                    let metadata = "Você está ouvindo \(radioPlayer.itemMusic) de \(radioPlayer.itemArtist)"
+                                    speechManager.speakAndListen(metadata: metadata)
                                 }, label:{
-                                    Image("icone_comandos")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
-                                        .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                    ZStack {
+                                        Image("icone_comandos")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                            .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
+                                        
+                                        if speechManager.isListening {
+                                            Circle()
+                                                .stroke(Color.red, lineWidth: 2)
+                                                .frame(width: geo.size.width * 0.07)
+                                                .scaleEffect(1.2)
+                                        }
+                                    }
                                 })
                                 
                                 Button(action: {
@@ -594,38 +635,43 @@ struct PrincipalView: View {
                                 .scaledToFit()
                                 .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.2 : geo.size.width * 0.15, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.2 : geo.size.height * 0.15)
                         }
-                        .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.1 : geo.size.height * 0.2)
+                        .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.15 : geo.size.height * 0.2)
                         
                         Spacer()
-                        ZStack{
-                            Image("bg_main_song_cover_shadow")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.5)
-                                .scaleEffect(1.1)
-                                .offset(x: geo.size.width * 0.1)
-                            
-                            ZStack {
-                                AlbumArtworkView(
-                                    artwork: radioPlayer.albumArtwork,
-                                    maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
-                                )
-                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.35 : geo.size.width * 0.45, height: geo.size.height * 0.55)
-                                .scaleEffect(1.1)
-                                .offset(x: geo.size.width * 0.1, y: geo.size.height * -0.01)
+                        Button(action:{
+                            router.go(to: .audio)
+                        }, label:{
+                            ZStack{
+                                Image("bg_main_song_cover_shadow")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.5)
+                                    .scaleEffect(1.1)
+                                    .offset(x: geo.size.width * 0.05, y: geo.size.height * 0.05)
                                 
-                                
-                                if dataController.minimalMode {
-                                   
-                                } else {
-                                    LottieView(animationName: "traco_capa_de_album_principal")
-                                        .scaledToFill()
-                                        .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.55)
-                                        .scaleEffect(1.3)
-                                        .offset(x: geo.size.width * 0.17, y: geo.size.height * 0.01)
+                                ZStack {
+                                    AlbumArtworkView(
+                                        artwork: radioPlayer.albumArtwork,
+                                        maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_main_song_cover" : "capa_do_album"
+                                    )
+                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.35 : geo.size.width * 0.45, height: geo.size.height * 0.55)
+                                    .scaleEffect(1.1)
+                                    .offset(x: geo.size.width * 0.1, y: geo.size.height * -0.01)
+                                    
+                                    
+                                    if dataController.minimalMode {
+                                       
+                                    } else {
+                                        LottieView(animationName: "traco_capa_de_album_principal")
+                                            .scaledToFill()
+                                            .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.55)
+                                            .scaleEffect(1.3)
+                                            .offset(x: geo.size.width * 0.18, y: geo.size.height * 0.05)
+                                    }
                                 }
                             }
-                        }
+                        })
+                       
                     }
                     
                     
@@ -679,7 +725,7 @@ struct PrincipalView: View {
         case "card_view_tiktok_main":
             linkHandler.openSocial("tiktok")
         case "card_view_youtube_main":
-            linkHandler.openSocial("youtube")
+            router.go(to: .playlist)
         default:
             print("Banner sem ação definida: \(name)")
         }

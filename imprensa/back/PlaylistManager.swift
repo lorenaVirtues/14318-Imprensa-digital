@@ -12,9 +12,6 @@ class PlaylistManager: ObservableObject {
     
     init() {
         load()
-        if playlists.isEmpty {
-            createMockData()
-        }
     }
     
     func addPlaylist(name: String, imageUrl: String?) {
@@ -79,15 +76,5 @@ class PlaylistManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([PlaylistModel].self, from: data) {
             playlists = decoded
         }
-    }
-    
-    private func createMockData() {
-        playlists = [
-            PlaylistModel(name: "Viagem", date: "01/01/2025", imageUrl: nil, songs: [
-                SongModel(title: "Música 1", artist: "Artista A", date: "01/01/2025"),
-                SongModel(title: "Música 2", artist: "Artista B", date: "02/01/2025")
-            ]),
-            PlaylistModel(name: "Treino", date: "15/01/2025", imageUrl: nil, songs: [])
-        ]
     }
 }

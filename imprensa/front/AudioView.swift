@@ -73,7 +73,7 @@ struct AudioView: View {
                             LottieView(animationName: "traco_capa_de_album_player")
                                 .scaledToFit()
                                 .scaleEffect(1.5)
-                                .offset(x: geo.size.width * 0.16, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.14 : geo.size.height * -0.3)
+                                .offset(x: geo.size.width * 0.16, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.12 : geo.size.height * -0.3)
                         }
                     }
                     .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * -0.15)
@@ -227,9 +227,7 @@ struct AudioView: View {
                             })
                         }
                         
-                        Image("bg_connected_device_card")
-                            .resizable()
-                            .scaledToFit()
+                        connectedDeviceCard
                             .frame(width: geo.size.width * 0.6, height: geo.size.height * 0.08)
                     }
                     .padding(.leading, 10)
@@ -312,6 +310,14 @@ struct AudioView: View {
                     .scaledToFit()
                     .ignoresSafeArea(.all)
                     .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1)
+                    
+                    if !dataController.minimalMode {
+                        LottieView(animationName: "traco_capa_de_album_player")
+                            .scaledToFit()
+                            .scaleEffect(1.5)
+                            .ignoresSafeArea(.all)
+                            .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.12 : geo.size.width * 0.1, y: geo.size.height * 0.17)
+                    }
                 }
                 .ignoresSafeArea(.all)
             }
@@ -365,9 +371,7 @@ struct AudioView: View {
                             })
                         }
                         
-                        Image("bg_connected_device_card")
-                            .resizable()
-                            .scaledToFit()
+                        connectedDeviceCard
                             .frame(width: geo.size.width * 0.35, height: geo.size.height * 0.15)
                     }
                     .padding(.top, 40)
@@ -465,4 +469,18 @@ struct AudioView: View {
                 }
             }
         }
+    
+    private var connectedDeviceCard: some View {
+        ZStack {
+            Image("bg_connected_device_card")
+                .resizable()
+                .scaledToFit()
+            
+            Text(radioPlayer.currentRouteName.isEmpty ? "Alto-falante do iPhone" : radioPlayer.currentRouteName)
+                .font(.custom("Spartan-Bold", size: 12))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .offset(x: -55, y: 5)
+        }
+    }
 }

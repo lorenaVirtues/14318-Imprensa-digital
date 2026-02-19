@@ -19,7 +19,7 @@ struct BannerCarouselView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: UIDevice.current.userInterfaceIdiom == .phone ? -40 : 25) {
+                HStack(spacing: UIDevice.current.userInterfaceIdiom == .phone ? -70 : 25) {
                     ForEach(0..<banners.count, id: \.self) { index in
                         GeometryReader { cardGeo in
                             let isPad = UIDevice.current.userInterfaceIdiom == .pad

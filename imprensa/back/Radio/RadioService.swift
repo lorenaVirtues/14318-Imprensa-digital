@@ -65,6 +65,7 @@ class RadioPlayer: NSObject, ObservableObject {
     @Published var currentArtworkUrl: String? = nil
     @Published var lastMetadataSource: MetadataSource = .placeholder
     @Published var lastShazamAt: Date? = nil
+    @Published var currentRouteName: String = ""
     
     @Published var volume: Float = 1.0 {
         didSet {
@@ -116,6 +117,9 @@ class RadioPlayer: NSObject, ObservableObject {
         // Adiciona observador inicial
         self.player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: &playerItemContext)
         self.observedPlayer = self.player
+        
+        updateRouteName()
+        NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange), name: AVAudioSession.routeChangeNotification, object: nil)
     }
     
     deinit {
@@ -242,6 +246,21 @@ class RadioPlayer: NSObject, ObservableObject {
             }
         @unknown default:
             break
+        }
+    }
+    
+    @objc private func handleRouteChange(notification: Notification) {
+        updateRouteName()
+    }
+    
+    private func updateRouteName() {
+        let currentRoute = AVAudioSession.sharedInstance().currentRoute
+        DispatchQueue.main.async {
+            if let output = currentRoute.outputs.first {
+                self.currentRouteName = output.portName
+            } else {
+                self.currentRouteName = "Desconhecido"
+            }
         }
     }
     

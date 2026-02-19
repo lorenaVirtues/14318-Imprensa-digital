@@ -10,8 +10,8 @@ struct WeatherCardView: View {
             // Background Image Priority
             Image(weatherSvc.condition?.cardBackgroundName ?? "card_view_weather_main")
                 .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: width * 0.8, height: height * 0.9, alignment: .top)
+                .scaledToFit()
+                .frame(width: width * 0.9, height: height, alignment: .top)
             
             // Content Overlay
             HStack {
@@ -20,7 +20,7 @@ struct WeatherCardView: View {
                     HStack(alignment: .top, spacing: 0) {
                         if let temp = weatherSvc.currentTemp {
                             Text("\(temp)")
-                                .font(.custom("Spartan-Bold", size: 30))
+                                .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 30 : 50))
                                 .foregroundColor(.white)
                         } else {
                             Text("--")
@@ -29,7 +29,7 @@ struct WeatherCardView: View {
                         }
                         
                         Text("°C")
-                            .font(.custom("Spartan-Bold", size: 14))
+                            .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 14 : 20))
                             .foregroundColor(.white)
                             .padding(.top, 10)
                     }
@@ -85,12 +85,12 @@ struct WeatherCardView: View {
                     .foregroundColor(.white)
                     .padding(.top, 5)
                 }
-                .padding(.leading, 40) // Adjusted to align inside the blue part
-                .padding(.top, 25)
-                .frame(width: width * 0.45, height: height * 0.5)
+                .padding(.leading, UIDevice.current.userInterfaceIdiom == .phone ? 60 : 40) // Adjusted to align inside the blue part
+                .padding(.top, UIDevice.current.userInterfaceIdiom == .phone ? 20 : 0)
+                .frame(width: width * 0.7, height: height * 0.5)
                 Spacer()
             }
         }
-        .frame(width: width, height: height)
+        .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? 0 : 50)
     }
 }

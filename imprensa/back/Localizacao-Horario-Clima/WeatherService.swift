@@ -73,12 +73,12 @@ struct WeatherCondition {
 }
 
 // ====== Modelos ClimaTempo ======
-private struct CTDayIndex: Decodable {
+struct CTDayIndex: Decodable {
     let cidade: String
     let json: String // "dias/DD-MM-YYYY/ID.json"
 }
 
-private struct CTResponse: Decodable {
+struct CTResponse: Decodable {
     // MS Health - Saúde e bem-estar
     struct MSHealth: Decodable {
         struct HealthItem: Decodable {
@@ -142,7 +142,7 @@ private struct CTResponse: Decodable {
         struct Pressure: Decodable {
             let pressure: Int?
         }
-        struct Humidity: Decodable {
+        struct HourlyHumidity: Decodable { // Changed from Humidity to HourlyHumidity to avoid conflict with CTResponse.Humidity if any, wait, there is no top level Humidity. Oh, wait, CTDaily has Rain but not Humidity.
             let relativeHumidity: Int?
         }
         struct Icon: Decodable {
@@ -153,7 +153,7 @@ private struct CTResponse: Decodable {
         let temperature: Temperature?
         let rain: Rain?
         let pressure: Pressure?
-        let humidity: Humidity?
+        let humidity: HourlyHumidity?
         let icon: Icon?
     }
     
@@ -179,6 +179,9 @@ final class WeatherService: ObservableObject {
     @Published var hourlyTemperatures: [(date: Date, temp: Int)] = [] // Dados para o gráfico
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    @Published var selectedDayIndex: Int = 0
+    private var lastResponse: CTResponse?
     
     // Constant for fallback (Salvador, BA)
     private let DEFAULT_LAT = -12.9714
@@ -463,19 +466,33 @@ final class WeatherService: ObservableObject {
             self.hourlyTemperatures = extractHourlyTemperaturesForChart(from: ct.hourlyForecast, or: ct.hourly)
             print("📊 Dados para gráfico: \(self.hourlyTemperatures.count) pontos")
 
-            // 5) Preenche publicados - Clima básico
-            // SEMPRE usa dados horários do hourlyForecast, nunca currentWeather para temperatura
+            self.lastResponse = ct
+            self.selectedDayIndex = 0 // Reset to today on new fetch
+            updateDisplayMetrics(with: ct, dayIndex: 0)
+
+        } catch {
+            self.errorMessage = error.localizedDescription
+            print("❌ Erro ao carregar clima: \(error)")
+        }
+
+        isLoading = false
+    }
+
+    public func selectDay(at index: Int) {
+        guard let response = lastResponse else { return }
+        selectedDayIndex = index
+        updateDisplayMetrics(with: response, dayIndex: index)
+    }
+
+    private func updateDisplayMetrics(with ct: CTResponse, dayIndex: Int) {
+        if dayIndex == 0 {
+            // Clima atual (hoje com dados horários)
+            let hourlyData = extractCurrentHourlyData(from: ct.hourlyForecast)
             if let hourly = hourlyData {
                 self.currentTemp = hourly.temperature?.temperature
                 self.humidityPct = hourly.humidity?.relativeHumidity
                 self.windKmh = hourly.wind?.velocity
-                if let precip = hourly.rain?.precipitation {
-                    // Se houver precipitação horária, pode ser usado como referência
-                    print("💧 Precipitação horária: \(precip) mm")
-                }
             } else {
-                // Fallback apenas se hourlyForecast não estiver disponível
-                print("⚠️ Usando fallback de currentWeather (não recomendado)")
                 if let t = ct.currentWeather?.temperature { self.currentTemp = t }
                 self.humidityPct = ct.currentWeather?.humidity
                 self.windKmh = ct.currentWeather?.windVelocity
@@ -493,65 +510,79 @@ final class WeatherService: ObservableObject {
                 self.precipProbPct = pp
             }
 
-            // Usa diretamente a condição da API do Climatempo
             let conditionText = ct.currentWeather?.condition
                 ?? ct.dailyForecast?.first?.textIcon?.text?.pt
             self.condition = WeatherCondition.from(text: conditionText)
-
-            self.daily = (ct.dailyForecast ?? [])
-                .prefix(7)
-                .compactMap { d in
-                    guard let iso = d.date,
-                          let min = d.temperature?.min,
-                          let max = d.temperature?.max else { return nil }
-                    // Usa a condição diretamente da API para o código
-                    let conditionText = d.textIcon?.text?.pt
-                    let code = inferCode(fromPT: conditionText)
-                    return DailyForecast(dateISO: iso, min: min, max: max, code: code)
-                }
             
-            // 6) Preenche publicados - Saúde e bem-estar (MS Health)
-            if let health = ct.msHealth {
-                // Mosquitos
-                self.mosquitoCondition = health.mosquito?.condition
-                self.mosquitoIncidence = health.mosquito?.incidence
-                self.mosquitoDescription = health.mosquito?.description
+            self.hourlyTemperatures = extractHourlyTemperaturesForChart(from: ct.hourlyForecast, or: ct.hourly)
+        } else {
+            // Previsão para um dia futuro
+            guard let forecast = ct.dailyForecast, dayIndex < forecast.count else { return }
+            let day = forecast[dayIndex]
+            
+            self.currentTemp = nil // Not showing "current" temp for future days
+            self.minTemp = day.temperature?.min
+            self.maxTemp = day.temperature?.max
+            self.precipProbPct = day.rain?.probability
+            
+            // For future days, we don't have a single "current" humidity/wind in DailyForecast.
+            // We can take them from the hourly forecast of that day (e.g., at 12:00)
+            if let dateISO = day.date, let dayHourly = ct.hourlyForecast?[dateISO] {
+                // Try to find 12:00 or middle of day
+                let midDay = dayHourly.first(where: { $0.date?.contains("T12:00") ?? false }) ?? dayHourly[dayHourly.count/2]
+                self.humidityPct = midDay.humidity?.relativeHumidity
+                self.windKmh = midDay.wind?.velocity
                 
-                // Ressecamento de pele
-                self.skinDrynessCondition = health.skindryness?.condition
-                self.skinDrynessIncidence = health.skindryness?.incidence
-                self.skinDrynessDescription = health.skindryness?.description
-                
-                // Gripe/Resfriado
-                self.fluColdCondition = health.flu_cold?.condition
-                self.fluColdIncidence = health.flu_cold?.incidence
-                self.fluColdDescription = health.flu_cold?.description
-                
-                // Índice UV
-                self.uvIndexCondition = health.iuv?.condition
-                self.uvIndexIncidence = health.iuv?.incidence
-                self.uvIndexDescription = health.iuv?.description
-                
-                // Vitamina D
-                self.vitaminDCondition = health.vitaminD?.condition
-                self.vitaminDIncidence = health.vitaminD?.incidence
-                self.vitaminDDescription = health.vitaminD?.description
-                
-                // Qualidade do ar
-                self.airQualityCondition = health.airQuality?.condition
-                self.airQualityIncidence = health.airQuality?.incidence
-                self.airQualityDescription = health.airQuality?.description
-                }
-
-            print("✅ Publicados atualizados: temp=\(self.currentTemp ?? -999)°C, min=\(self.minTemp ?? -999), max=\(self.maxTemp ?? -999), hum=\(self.humidityPct ?? -1)%, vento=\(self.windKmh ?? -1)km/h, pp=\(self.precipProbPct ?? -1)%")
-            print("📦 daily.count=\(self.daily.count)")
-
-        } catch {
-            self.errorMessage = error.localizedDescription
-            print("❌ Erro ao carregar clima: \(error)")
+                // Update graph for that specific day
+                self.hourlyTemperatures = processHourlyArray(dayHourly)
+            } else {
+                self.humidityPct = nil
+                self.windKmh = nil
+                self.hourlyTemperatures = []
+            }
+            
+            let conditionText = day.textIcon?.text?.pt
+            self.condition = WeatherCondition.from(text: conditionText)
         }
+        
+        // Populate daily list (always needed)
+        self.daily = (ct.dailyForecast ?? [])
+            .prefix(7)
+            .compactMap { d in
+                guard let iso = d.date,
+                      let min = d.temperature?.min,
+                      let max = d.temperature?.max else { return nil }
+                let conditionText = d.textIcon?.text?.pt
+                let code = inferCode(fromPT: conditionText)
+                return DailyForecast(dateISO: iso, min: min, max: max, code: code)
+            }
 
-        isLoading = false
+        // Update MS Health
+        if let health = ct.msHealth {
+            self.mosquitoCondition = health.mosquito?.condition
+            self.mosquitoIncidence = health.mosquito?.incidence
+            self.mosquitoDescription = health.mosquito?.description
+
+            self.skinDrynessCondition = health.skindryness?.condition
+            self.skinDrynessIncidence = health.skindryness?.incidence
+            self.skinDrynessDescription = health.skindryness?.description
+
+            self.fluColdCondition = health.flu_cold?.condition
+            self.fluColdIncidence = health.flu_cold?.incidence
+            self.fluColdDescription = health.flu_cold?.description
+
+            self.uvIndexCondition = health.iuv?.condition
+            self.uvIndexIncidence = health.iuv?.incidence
+            self.uvIndexDescription = health.iuv?.description
+
+            self.vitaminDCondition = health.vitaminD?.condition
+            self.vitaminDIncidence = health.vitaminD?.incidence
+            self.vitaminDDescription = health.vitaminD?.description
+
+            self.airQualityCondition = health.airQuality?.condition
+            self.airQualityIncidence = health.airQuality?.incidence
+            self.airQualityDescription = health.airQuality?.description
+        }
     }
 
 

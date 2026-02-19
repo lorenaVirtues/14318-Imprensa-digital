@@ -43,7 +43,5 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Precisamos de acesso à sua galeria para que você possa personalizar as capas das suas playlists.</string>
 </dict>
 </plist>

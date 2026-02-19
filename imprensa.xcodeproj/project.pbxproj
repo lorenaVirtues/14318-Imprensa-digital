@@ -361,7 +361,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"imprensa/Preview Content\"";
-				DEVELOPMENT_TEAM = R6LD875UK5;
+				DEVELOPMENT_TEAM = CFMATG4H4H;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -370,6 +370,9 @@
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O app precisa acessar a rede local para conectar ao Google Cast.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Precisamos de acesso ao microfone para ouvir seus comandos de voz.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Precisamos de acesso à sua galeria para que você possa personalizar as capas das suas playlists.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Precisamos de acesso ao reconhecimento de voz para processar seus comandos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -383,7 +386,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.app.imprensa-dev";
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -400,7 +403,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"imprensa/Preview Content\"";
-				DEVELOPMENT_TEAM = R6LD875UK5;
+				DEVELOPMENT_TEAM = CFMATG4H4H;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -409,6 +412,9 @@
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O app precisa acessar a rede local para conectar ao Google Cast.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Precisamos de acesso ao microfone para ouvir seus comandos de voz.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Precisamos de acesso à sua galeria para que você possa personalizar as capas das suas playlists.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Precisamos de acesso ao reconhecimento de voz para processar seus comandos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -422,7 +428,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.app.imprensa-dev";
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

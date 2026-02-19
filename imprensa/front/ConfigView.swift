@@ -11,6 +11,7 @@ struct ConfigView: View {
     @EnvironmentObject var dataController: AppDataController
     @EnvironmentObject var radioPlayer: RadioPlayer
     @EnvironmentObject var router: NavigationRouter
+    @EnvironmentObject var speechManager: SpeechManager
     
     @AppStorage("isMinimalMode") private var isMinimalMode = false
     
@@ -43,6 +44,7 @@ struct ConfigView: View {
         case pairingInfo
         case generic(title: String, message: String)
         case advanced
+        case resetConfirm
         
         var id: String {
             switch self {
@@ -52,6 +54,7 @@ struct ConfigView: View {
             case .pairingInfo: return "pairing"
             case .generic(let t, _): return t
             case .advanced: return "advanced"
+            case .resetConfirm: return "reset"
             }
         }
     }
@@ -117,6 +120,15 @@ struct ConfigView: View {
                     message: Text(message),
                     dismissButton: .default(Text("OK"))
                 )
+            case .resetConfirm:
+                return Alert(
+                    title: Text("Restaurar Padrões"),
+                    message: Text("Deseja voltar todas as configurações para o padrão original do aplicativo?"),
+                    primaryButton: .destructive(Text("Restaurar"), action: {
+                        resetToDefaults()
+                    }),
+                    secondaryButton: .cancel(Text("Cancelar"))
+                )
             default:
                 return Alert(title: Text("Opção Alterada"))
             }
@@ -139,6 +151,34 @@ struct ConfigView: View {
         }
         .onChange(of: isBoldText) { newValue in
             activeAlert = .generic(title: "Texto em Negrito", message: "Destaque de fonte alterado para: \(newValue ? "Ativado" : "Desativado").")
+        }
+        .onChange(of: voiceCommands) { newValue in
+                   if !newValue {
+                       // se desligou, garante que não fique captando
+                       speechManager.stopListening()
+                       activeAlert = .generic(title: "Comandos de Voz", message: "Navegação por voz desativada.")
+                   } else {
+                       activeAlert = .voiceHelp
+                   }
+               }
+
+    }
+    
+    private func resetToDefaults() {
+        withAnimation {
+            autoPlay = true
+            audioMono = false
+            audioBalance = 0.5
+            voiceCommands = true
+            feedbackSounds = false
+            locationPermission = true
+            pairingPermission = true
+            inactivityTime = 15
+            dataController.minimalMode = false
+            isMinimalMode = false
+            speechManager.stopListening()
+            
+            showSaveAlert = true
         }
     }
     
@@ -428,9 +468,9 @@ struct ConfigView: View {
                             }
                             
                             Button(action: {
-                                activeAlert = .advanced
+                                activeAlert = .resetConfirm
                             }) {
-                                Image("btn_reset_default") // Usando o botão como 'Opção Avançado' visualmente ou substituindo se houver imagem específica
+                                Image("btn_reset_default")
                                      .resizable()
                                      .scaledToFit()
                                      .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3)
@@ -699,9 +739,9 @@ struct ConfigView: View {
                             }
                             
                             Button(action: {
-                                activeAlert = .advanced
+                                activeAlert = .resetConfirm
                             }) {
-                                Image("btn_reset_default") // Usando o botão como 'Opção Avançado' visualmente ou substituindo se houver imagem específica
+                                Image("btn_reset_default")
                                      .resizable()
                                      .scaledToFit()
                                      .frame(width: geo.size.width * 0.25)
@@ -722,26 +762,43 @@ struct ConfigSection<Content: View>: View {
     var title: String
     var content: () -> Content
     
+    @State private var isExpanded: Bool = true
+    
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .appFont(weight: .bold, size: 16)
-                    .foregroundColor(.white)
-                Spacer()
-                Image("btn_expand_interactive")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 20)
+            Button(action: {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.825, blendDuration: 0)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Text(title)
+                        .appFont(weight: .bold, size: 16)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image("btn_expand_interactive")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20)
+                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                }
+                .padding()
+                .background(Color(red: 26/255, green: 60/255, blue: 104/255))
             }
-            .padding()
-            .background(Color(red: 26/255, green: 60/255, blue: 104/255))
+            .buttonStyle(PlainButtonStyle())
             
-            VStack {
-                content()
+            if isExpanded {
+                VStack {
+                    content()
+                }
+                .background(Color(red: 245/255, green: 245/255, blue: 245/255))
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .top)),
+                    removal: .opacity.combined(with: .move(edge: .top))
+                ))
             }
-            .background(Color(red: 245/255, green: 245/255, blue: 245/255))
         }
+        .clipped()
     }
 }
 
@@ -772,16 +829,33 @@ struct ConfigToggle: View {
             
             Spacer()
             
-            Button(action: { isOn.toggle() }) {
-                Image(systemName: isOn ? "checkmark.square.fill" : "square")
-                    .resizable()
-                    .frame(width: 22, height: 22)
-                    .foregroundColor(isOn ? Color(red: 26/255, green: 60/255, blue: 104/255) : .gray)
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isOn.toggle()
+                }
+            }) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Color("azulEscuro"), lineWidth: 1.8)
+                        .frame(width: 24, height: 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.white)
+                        )
+
+                    if isOn {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Color("azulEscuro"))
+                    }
+                }
             }
+            .buttonStyle(.plain)
         }
         .padding()
     }
 }
+
 
 struct CustomSlider: View {
     @Binding var value: Double
@@ -801,9 +875,9 @@ struct CustomSlider: View {
                     .frame(width: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width, height: 12)
                     .cornerRadius(6)
                 
-                Circle()
+                Rectangle()
                     .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
-                    .frame(width: 14, height: 14)
+                    .frame(width: 14, height: 12)
                     .offset(x: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width - 7)
                     .gesture(
                         DragGesture()

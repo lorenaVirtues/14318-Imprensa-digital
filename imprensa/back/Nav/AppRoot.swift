@@ -17,6 +17,7 @@ struct AppRoot: View {
     @StateObject private var monitor = Monitor()
     @StateObject private var recognitionService = NowPlayingRecognitionService()
     @StateObject private var ytPlayer = YouTubeBackgroundPlayer.shared
+    @StateObject private var speechManager = SpeechManager()
     @State private var didParse   = false
     @State private var timerDone  = false
     @State var radio: RadioModel
@@ -34,6 +35,7 @@ struct AppRoot: View {
                     PrincipalView(radio: radio)
                         .environmentObject(radioPlayer)
                         .environmentObject(dataController)
+                        .environmentObject(speechManager)
                 case .menu:
                     MenuView()
                         .environmentObject(radioPlayer)
@@ -48,6 +50,7 @@ struct AppRoot: View {
                     ConfigView()
                         .environmentObject(radioPlayer)
                         .environmentObject(dataController)
+                        .environmentObject(speechManager)
                 case .clima:
                     ClimaView()
                         .environmentObject(dataController)
@@ -87,6 +90,7 @@ struct AppRoot: View {
         .environmentObject(playlistManager)
         .environmentObject(recognitionService)
         .environmentObject(ytPlayer)
+        .environmentObject(speechManager)
         .onAppear {
                     recognitionService.attach(radioPlayer: radioPlayer)
                     recognitionService.start()

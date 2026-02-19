@@ -9,18 +9,13 @@ enum AudioNormalizer {
     }
 
     static func normalizeToWavIfPossible(inputURL: URL) async throws -> URL {
-        // Tentativa 1: WAV (PCM)
+        // Tentativa 1: WAV (PCM) — Ideal para o ShazamKit da Apple
         do {
             return try await transcodeToWav(inputURL: inputURL)
         } catch {
-            print("[Recognizer] WAV transcode failed: \(error.localizedDescription). Falling back to M4A(AAC).")
-            // Tentativa 2: M4A (AAC) — tenta via ExportSession primeiro (mais tolerante)
-            do {
-                return try await exportToM4A(inputURL: inputURL)
-            } catch {
-                print("[Recognizer] M4A export failed: \(error.localizedDescription). Falling back to M4A via reader/writer.")
-                return try await transcodeToM4A(inputURL: inputURL)
-            }
+            print("[Recognizer] WAV transcode failed: \(error.localizedDescription). Falling back to M4A.")
+            // Tentativa 2: M4A (AAC) — Fallback mais leve
+            return try await normalizeToM4A(inputURL: inputURL)
         }
     }
 
@@ -164,6 +159,16 @@ enum AudioNormalizer {
                     }
                 }
             }
+        }
+    }
+
+    static func normalizeToM4A(inputURL: URL) async throws -> URL {
+        // Tenta via ExportSession primeiro (mais tolerante)
+        do {
+            return try await exportToM4A(inputURL: inputURL)
+        } catch {
+            print("[Recognizer] M4A export failed: \(error.localizedDescription). Falling back to M4A via reader/writer.")
+            return try await transcodeToM4A(inputURL: inputURL)
         }
     }
 

@@ -13,6 +13,7 @@ struct ContentView: View {
     let width = UIScreen.main.bounds.size.width
     @StateObject private var castSession = CastSessionManager.shared
     @StateObject private var monitor = Monitor()
+    @StateObject private var speechManager = SpeechManager()
     @State private var hasStarted = false
     @State private var showSobre = false
     @State private var showTermos = false

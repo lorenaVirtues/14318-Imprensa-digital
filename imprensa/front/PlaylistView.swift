@@ -10,6 +10,7 @@ struct PlaylistView: View {
     @State private var showingCreateModal = false
     @State private var selectedPlaylist: PlaylistModel? = nil
     @State private var isEditing = false
+    @State private var showingSearchSheet = false
     
     var body: some View {
         ZStack {
@@ -25,7 +26,24 @@ struct PlaylistView: View {
                 
                 // Nova Playlist Button
                 HStack {
+                    Button(action: {
+                        showingSearchSheet = true
+                    }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .resizable()
+                                .frame(width: 24, height: 24)
+                                .foregroundColor(.gray)
+                            Text("BUSCAR")
+                                .font(.custom("Spartan-Bold", size: 14))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.leading, 20)
+                    .padding(.top, 10)
+                    
                     Spacer()
+                    
                     Button(action: {
                         isEditing = false
                         showingCreateModal = true
@@ -48,15 +66,33 @@ struct PlaylistView: View {
                 // Playlist List
                 ScrollView {
                     VStack(spacing: 20) {
-                        ForEach(playlistManager.playlists) { playlist in
-                            PlaylistRow(playlist: playlist) {
-                                selectedPlaylist = playlist
-                            } onDelete: {
-                                playlistManager.deletePlaylist(id: playlist.id)
-                            } onEdit: {
-                                selectedPlaylist = playlist
-                                isEditing = true
-                                showingCreateModal = true
+                        if playlistManager.playlists.isEmpty {
+                            VStack(spacing: 15) {
+                                Image(systemName: "music.note.list")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.gray.opacity(0.5))
+                                
+                                Text("VOCÊ AINDA NÃO POSSUI PLAYLISTS")
+                                    .font(.custom("Spartan-Bold", size: 14))
+                                    .foregroundColor(.gray.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                
+                                Text("Toque em 'NOVA PLAYLIST' para começar.")
+                                    .font(.custom("Spartan-Regular", size: 12))
+                                    .foregroundColor(.gray.opacity(0.5))
+                            }
+                            .padding(.top, 100)
+                        } else {
+                            ForEach(playlistManager.playlists) { playlist in
+                                PlaylistRow(playlist: playlist) {
+                                    selectedPlaylist = playlist
+                                } onDelete: {
+                                    playlistManager.deletePlaylist(id: playlist.id)
+                                } onEdit: {
+                                    selectedPlaylist = playlist
+                                    isEditing = true
+                                    showingCreateModal = true
+                                }
                             }
                         }
                     }
@@ -123,6 +159,9 @@ struct PlaylistView: View {
                 .transition(.scale)
                 .zIndex(3)
             }
+        }
+        .sheet(isPresented: $showingSearchSheet) {
+            AddSongSheet(playlistId: nil) // Global search
         }
         .navigationBarHidden(true)
         .preferredColorScheme(.light)
@@ -200,17 +239,12 @@ struct PlaylistRow: View {
                 ZStack {
                     AlbumArtworkView(
                         artworkURL: playlist.imageUrl ?? playlist.songs.first?.imageUrl,
-                        maskImageName: "img_playlist_cover",
-                        fallbackImageName: "img_playlist_cover"
+                        maskImageName: "Polygon 12",
+                        fallbackImageName: "Polygon 12"
                     )
                     .frame(width: 100, height: 90)
                     .clipped()
-                    
-                    // Slant Overlay to transition to the blue title part
-                    SlantShape()
-                        .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
-                        .frame(width: 40)
-                        .offset(x: 40)
+                   
                 }
                 .frame(width: 100, height: 90)
                 .clipped()
@@ -220,21 +254,21 @@ struct PlaylistRow: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(playlist.name)
-                            .font(.custom("Spartan-Bold", size: 18))
+                            .font(.custom("Spartan-Bold", size: 16))
                             .foregroundColor(.white)
                         Text(playlist.date)
-                            .font(.custom("Spartan-Regular", size: 12))
+                            .font(.custom("Spartan-Regular", size: 10))
                             .foregroundColor(.white.opacity(0.7))
                     }
-                    .padding(.leading, 15)
+                    .padding(.leading, 20)
                     
                     Spacer()
                     
                     Button(action: onTap) {
-                        Image(systemName: "play.fill")
+                        Image("btn_playlist_play")
                             .resizable()
+                            .scaledToFit()
                             .frame(width: 25, height: 30)
-                            .foregroundColor(.white)
                     }
                     .padding(.trailing, 10)
                     
@@ -286,18 +320,6 @@ struct PlaylistRow: View {
     }
 }
 
-struct SlantShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: rect.width, y: 0))
-        path.addLine(to: CGPoint(x: 0, y: rect.height))
-        path.closeSubpath()
-        return path
-    }
-}
-
-// MARK: - Detail View Component
 struct PlaylistDetailView: View {
     @EnvironmentObject private var playlistManager: PlaylistManager
     @EnvironmentObject private var ytPlayer: YouTubeBackgroundPlayer
@@ -305,6 +327,9 @@ struct PlaylistDetailView: View {
     var onBack: () -> Void
     var onDelete: () -> Void
     var onEdit: () -> Void
+    
+    @State private var showingAddSongSheet = false
+    @State private var selectedSongForPicker: SongModel? = nil
     
     var body: some View {
         GeometryReader { geo in
@@ -316,8 +341,20 @@ struct PlaylistDetailView: View {
                 } else {
                     portraitView(geo: geo)
                 }
+                
+                if let song = selectedSongForPicker {
+                    PlaylistPickerSheet(song: song) {
+                        selectedSongForPicker = nil
+                    }
+                    .transition(.opacity)
+                    .zIndex(20)
+                }
             }
-        }.preferredColorScheme(.light)
+        }
+        .sheet(isPresented: $showingAddSongSheet) {
+            AddSongSheet(playlistId: playlist.id)
+        }
+        .preferredColorScheme(.light)
     }
     
     @ViewBuilder
@@ -332,66 +369,74 @@ struct PlaylistDetailView: View {
                 )
                 .frame(height: 300)
                 .clipped()
-                .padding(.leading, 40)
+                .padding(.leading, 60)
                 
                 // Side Controls (as seen in image vertical bar)
                 VStack(spacing: 20) {
-                    detailActionButton(icon: "arrow.counterclockwise") { onBack() }
-                    detailActionButton(icon: "pencil") { onEdit() }
-                    detailActionButton(icon: "trash") { onDelete() }
+                    detailActionButton(icon: "btn_return_playlist") { onBack() }
+                    detailActionButton(icon: "btn_edit_playlist") { onEdit() }
+                    detailActionButton(icon: "btn_delete_playlist") { onDelete() }
                 }
                 .padding(.leading, 20)
                 .padding(.bottom, 120)
+                .offset(y: geo.size.height * 0.05)
                 
                 // Playlist Title Card
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(playlist.name)
-                            .font(.custom("Spartan-Bold", size: 22))
-                            .foregroundColor(.white)
-                        HStack(spacing: 5) {
-                            Image(systemName: "play.fill")
-                                .resizable()
-                                .frame(width: 8, height: 8)
-                            Text(playlist.date)
-                                .font(.custom("Spartan-Regular", size: 12))
-                        }
-                        .foregroundColor(.white.opacity(0.8))
-                    }
-                    .padding(.leading, 20)
-                    
-                    Spacer()
-                    
-                    Button(action: {}) {
-                        Image(systemName: "shuffle")
-                            .resizable()
-                            .frame(width: 20, height: 20)
-                            .foregroundColor(.white)
-                            .padding(10)
-                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.5), lineWidth: 1))
-                    }
-                    
-                    Button(action: {
-                        if let firstSong = playlistManager.playlists.first(where: { $0.id == playlist.id })?.songs.first {
-                            ytPlayer.play(artist: firstSong.artist, song: firstSong.title)
-                        }
-                    }) {
-                        ZStack {
-                            Image(systemName: "play.fill")
-                                .resizable()
-                                .frame(width: 30, height: 35)
+                ZStack {
+                    Image("bg_card_playlist_info")
+                        .resizable()
+                        .scaledToFit()
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(playlist.name)
+                                .font(.custom("Spartan-Bold", size: 22))
                                 .foregroundColor(.white)
-                            
-                            if ytPlayer.isLoading {
-                                LoadingView()
-                                    .scaleEffect(1.5)
+                            HStack(spacing: 5) {
+                                Image("ic_triangle_playlist_date")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 8, height: 8)
+                                Text(playlist.date)
+                                    .font(.custom("Spartan-Regular", size: 12))
+                            }
+                            .foregroundColor(.white.opacity(0.8))
+                        }
+                        .padding(.leading, 20)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            showingAddSongSheet = true
+                        }) {
+                            Image("btn_add_song_to_playlist")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30, height: 30)
+                                .padding(10)
+                        }
+                        
+                        Button(action: {
+                            if let firstSong = playlistManager.playlists.first(where: { $0.id == playlist.id })?.songs.first {
+                                ytPlayer.play(artist: firstSong.artist, song: firstSong.title)
+                            }
+                        }) {
+                            ZStack {
+                                Image("btn_playlist_play")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 30, height: 35)
+                                    .foregroundColor(.white)
+                                
+                                if ytPlayer.isLoading {
+                                    LoadingView()
+                                        .scaleEffect(1.5)
+                                }
                             }
                         }
+                        .padding(.trailing, 20)
                     }
-                    .padding(.trailing, 20)
                 }
                 .frame(height: 100)
-                .background(Color(red: 26/255, green: 60/255, blue: 104/255))
                 .padding(.leading, 60)
                 .padding(.trailing, 20)
                 .offset(y: 50)
@@ -408,9 +453,11 @@ struct PlaylistDetailView: View {
                                 .padding(.top, 100)
                         } else {
                             ForEach(currentPlaylist.songs) { song in
-                                SongRow(song: song) {
+                                SongRow(song: song, onRemove: {
                                     playlistManager.removeSong(from: playlist.id, songId: song.id)
-                                }
+                                }, onAddToPlaylist: {
+                                    withAnimation { selectedSongForPicker = song }
+                                })
                                 Divider().padding(.horizontal, 20)
                             }
                         }
@@ -478,9 +525,9 @@ struct PlaylistDetailView: View {
                 
                 // Bottom row buttons
                 HStack(spacing: 30) {
-                    detailActionButton(icon: "arrow.counterclockwise") { onBack() }
-                    detailActionButton(icon: "pencil") { onEdit() }
-                    detailActionButton(icon: "trash") { onDelete() }
+                    detailActionButton(icon: "btn_return_playlist") { onBack() }
+                    detailActionButton(icon: "btn_edit_playlist") { onEdit() }
+                    detailActionButton(icon: "btn_delete_playlist") { onDelete() }
                 }
                 .padding(.bottom, 20)
             }
@@ -492,9 +539,11 @@ struct PlaylistDetailView: View {
                     VStack(spacing: 1) {
                         if let currentPlaylist = playlistManager.playlists.first(where: { $0.id == playlist.id }) {
                             ForEach(currentPlaylist.songs) { song in
-                                SongRow(song: song) {
+                                SongRow(song: song, onRemove: {
                                     playlistManager.removeSong(from: playlist.id, songId: song.id)
-                                }
+                                }, onAddToPlaylist: {
+                                    withAnimation { selectedSongForPicker = song }
+                                })
                                 Divider().padding(.horizontal, 20)
                             }
                         }
@@ -510,15 +559,10 @@ struct PlaylistDetailView: View {
     @ViewBuilder
     private func detailActionButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
-                Image(systemName: icon)
-                    .foregroundColor(.white)
-                    .font(.system(size: 16, weight: .bold))
-            }
-            .frame(width: 35, height: 35)
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.3), lineWidth: 1))
+            Image(icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 35, height: 35)
         }
     }
 }
@@ -527,6 +571,7 @@ struct SongRow: View {
     @EnvironmentObject private var ytPlayer: YouTubeBackgroundPlayer
     var song: SongModel
     var onRemove: () -> Void
+    var onAddToPlaylist: () -> Void
     
     var body: some View {
         HStack(spacing: 0) {
@@ -540,8 +585,8 @@ struct SongRow: View {
                 // Album Art
                 AlbumArtworkView(
                     artworkURL: song.imageUrl,
-                    maskImageName: "Polygon 12",
-                    fallbackImageName: "Polygon 12"
+                    maskImageName: "img_playlist_cover",
+                    fallbackImageName: "img_playlist_cover"
                 )
                 .frame(width: 55, height: 55)
                 .padding(.leading, 12)
@@ -566,19 +611,28 @@ struct SongRow: View {
                             .font(.title3)
                             .foregroundColor(.gray)
                     }
-                    Button(action: {}) {
+                    Button(action: onAddToPlaylist) {
                         Image(systemName: "plus.square")
+                            .rotationEffect(.degrees(90))
                             .font(.title3)
                             .foregroundColor(.gray)
                     }
                     Button(action: {
-                        ytPlayer.play(artist: song.artist, song: song.title)
+                        let key = YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title)
+                        if ytPlayer.currentKey == key {
+                            if ytPlayer.isPlaying {
+                                ytPlayer.pause()
+                            } else {
+                                ytPlayer.resume()
+                            }
+                        } else {
+                            ytPlayer.play(artist: song.artist, song: song.title)
+                        }
                     }) {
                         ZStack {
-                            // Slanted/Triangle play button as in art
-                            Image(systemName: "play.fill")
+                            Image(systemName: (ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) && ytPlayer.isPlaying) ? "pause.fill" : "play.fill")
                                 .resizable()
-                                .frame(width: 18, height: 24)
+                                .frame(width: (ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) && ytPlayer.isPlaying) ? 20 : 18, height: 24)
                                 .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                             
                             if ytPlayer.isLoading && ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) {
@@ -836,11 +890,7 @@ struct PlaylistPickerRow: View {
                         fallbackImageName: "Polygon 12"
                     )
                     .frame(width: 70, height: 50)
-                    
-                    SlantShape()
-                        .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
-                        .frame(width: 25)
-                        .offset(x: 12)
+                
                 }
                 .frame(width: 60, height: 50)
                 .clipped()

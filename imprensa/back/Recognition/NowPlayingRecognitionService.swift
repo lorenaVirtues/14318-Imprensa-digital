@@ -116,9 +116,17 @@ final class NowPlayingRecognitionService: ObservableObject {
                 let result = try await shazamKit.recognize(audioURL: uploadURL)
                 applyResult(title: result.title, artist: result.artist, source: .shazam, rp: rp, start: start)
             } catch {
-                print("[Recognizer] ShazamKit failed: \(error.localizedDescription). Trying fallback API...")
-                // 3) Fallback para a API customizada se o ShazamKit falhar
-                try await fallbackRecognition(fileURL: uploadURL, rp: rp, start: start)
+                print("[Recognizer] ShazamKit failed: \(error.localizedDescription). Trying fallback API with M4A...")
+                
+                // Fallback: Transcodifica para M4A (AAC) que é mais leve e aceito pela API virtues.now
+                do {
+                    let fallbackURL = try await AudioNormalizer.normalizeToM4A(inputURL: snippet.fileURL)
+                    try await fallbackRecognition(fileURL: fallbackURL, rp: rp, start: start)
+                } catch {
+                    print("[Recognizer] M4A fallback transcode failed: \(error.localizedDescription)")
+                    // Se falhar o transcode, tenta com o arquivo original como última esperança
+                    try await fallbackRecognition(fileURL: snippet.fileURL, rp: rp, start: start)
+                }
             }
             
         } catch {
