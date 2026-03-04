@@ -40,6 +40,18 @@ struct SplashView: View {
                 portraitNames:  ["splash_828x1792", "splash_800x1280", "splash_1024x1366"],
                 landscapeNames: ["splash_1792x828", "splash_1280x800", "splash_1792x828"]
             ).ignoresSafeArea()
+            
+            HStack{
+                Spacer()
+                VStack{
+                    Image("copyright")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.6, height: geo.size.height * 0.1)
+                    Spacer()
+                }
+                Spacer()
+            }
         }
     }
     
@@ -55,6 +67,17 @@ struct SplashView: View {
                 portraitNames:  ["splash_828x1792", "splash_800x1280", "splash_1024x1366"],
                 landscapeNames: ["splash_1792x828", "splash_1280x800", "splash_1792x828"]
             ).ignoresSafeArea()
+            
+            HStack{
+                VStack{
+                    Image("copyright")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.6, height: geo.size.height * 0.1)
+                    Spacer()
+                }
+                Spacer()
+            }
         }
     }
 }

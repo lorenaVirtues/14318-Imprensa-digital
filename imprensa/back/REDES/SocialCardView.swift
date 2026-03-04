@@ -419,35 +419,61 @@ struct YouTubeEmbedView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
         cfg.allowsInlineMediaPlayback = true
+        if #available(iOS 10.0, *) {
+            cfg.mediaTypesRequiringUserActionForPlayback = []
+        }
         let web = WKWebView(frame: .zero, configuration: cfg)
         web.isOpaque = false
         web.backgroundColor = .clear
-        if let embed = Self.embedURL(from: postURL) {
-            web.load(URLRequest(url: embed))
+        
+        // Custom User Agent para evitar bloqueios de robôs/mobile
+        web.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        
+        if let id = Self.extractVideoID(from: postURL) {
+            let html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>
+                    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent; overflow: hidden; }
+                    #player { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+                </style>
+            </head>
+            <body>
+                <iframe id="player" type="text/html" 
+                    src="https://www.youtube-nocookie.com/embed/\(id)?enablejsapi=1&playsinline=1&rel=0&autoplay=0&origin=https://www.youtube-nocookie.com"
+                    frameborder="0" allowfullscreen>
+                </iframe>
+            </body>
+            </html>
+            """
+            // Usar baseURL como youtube-nocookie.com ajuda a validar a origem do embed
+            web.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
         } else {
             web.load(URLRequest(url: postURL))
         }
         return web
     }
     func updateUIView(_ uiView: WKWebView, context: Context) {}
-    static func embedURL(from url: URL) -> URL? {
+    
+    static func extractVideoID(from url: URL) -> String? {
         let s = url.absoluteString
-        var videoID: String? = nil
         
         if s.contains("youtu.be/") {
-            videoID = s.split(separator: "/").last?.split(separator: "?").first.map(String.init)
+            return s.components(separatedBy: "youtu.be/").last?.split(separator: "?").first.map(String.init)
         } else if s.contains("watch?v=") {
             if let comp = URLComponents(string: s) {
-                videoID = comp.queryItems?.first(where: { $0.name == "v" })?.value
+                return comp.queryItems?.first(where: { $0.name == "v" })?.value
             }
         } else if s.contains("shorts/") {
-            videoID = s.components(separatedBy: "shorts/").last?.split(separator: "?").first.map(String.init)
+            return s.components(separatedBy: "shorts/").last?.split(separator: "?").first.map(String.init)
         } else if s.contains("embed/") {
-            videoID = s.components(separatedBy: "embed/").last?.split(separator: "?").first.map(String.init)
-        }
-        
-        if let id = videoID {
-            return URL(string: "https://www.youtube-nocookie.com/embed/\(id)?playsinline=1")
+            return s.components(separatedBy: "embed/").last?.split(separator: "?").first.map(String.init)
+        } else if s.contains("v/") { 
+             return s.components(separatedBy: "v/").last?.split(separator: "?").first.map(String.init)
+        } else if s.contains("live/") { 
+             return s.components(separatedBy: "live/").last?.split(separator: "?").first.map(String.init)
         }
         return nil
     }

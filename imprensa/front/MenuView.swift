@@ -100,16 +100,17 @@ struct MenuView: View {
             VStack(spacing: 0){
                 // Header
                 HStack{
-                    if isMinimalMode {
+                    if dataController.minimalMode {
                         Image("logo")
                               .resizable()
                               .scaledToFit()
                               .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
+                              .scaleEffect(1.0)
                     } else {
                         LottieView(animationName: "logotipo")
                             .scaledToFit()
                             .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
-                            .scaleEffect(2.0)
+                            .scaleEffect(UIDevice.current.userInterfaceIdiom == .phone ? 2.5 : 2.0)
                     }
                       
                     
@@ -190,6 +191,7 @@ struct MenuView: View {
                                 MenuItem(icon: "btn_menu_about_us") { router.go(to: .sobre) }
                                 MenuItem(icon: "btn_menu_terms") { showTermos = true }
                                 MenuItem(icon: "btn_menu_share") { showCompartilhar = true }
+                                MenuItem(icon: "btn_menu_suggestion") { router.go(to: .sugestao) }
                             }
                             .padding()
                         }
@@ -335,12 +337,13 @@ struct MenuView: View {
                     VStack(spacing: 20) {
                         // SOBRE O APP Section
                         MenuSection(title: "SOBRE O APP") {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 15) {
                                 MenuItem(icon: "btn_menu_contact") { router.go(to: .contato) }
                                 MenuItem(icon: "btn_menu_rate") { avaliarApp() }
                                 MenuItem(icon: "btn_menu_about_us") { router.go(to: .sobre) }
                                 MenuItem(icon: "btn_menu_terms") { showTermos = true }
                                 MenuItem(icon: "btn_menu_share") { showCompartilhar = true }
+                                MenuItem(icon: "btn_menu_suggestion") { router.go(to: .sugestao) }
                             }
                             .padding()
                         }
@@ -351,7 +354,7 @@ struct MenuView: View {
                         
                         // REDES SOCIAIS Section
                         MenuSection(title: "REDES SOCIAIS") {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 15) {
                                 MenuItem(icon: "btn_menu_whatsapp") { openWhatsapp() }
                                 MenuItem(icon: "btn_menu_facebook") { openFacebook() }
                                 MenuItem(icon: "btn_menu_instagram") { openInstagram() }
@@ -367,7 +370,7 @@ struct MenuView: View {
                         
                         // PAREAMENTO Section
                         MenuSection(title: "PAREAMENTO") {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 15) {
                                 MenuItem(icon: "btn_menu_bluetooth") { openAirPlay() }
                                 MenuItem(icon: "btn_menu_chromecast") {   let castButton = GCKUICastButton(frame: .zero)
                                     castButton.sendActions(for: .touchUpInside) }
@@ -381,7 +384,7 @@ struct MenuView: View {
                         
                         // IR PARA Section
                         MenuSection(title: "IR PARA") {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 15) {
                                 MenuItem(icon: "btn_menu_playlists") { router.go(to: .playlist) }
                                 MenuItem(icon: "btn_menu_weather") { router.go(to: .clima) }
                             }
@@ -541,8 +544,9 @@ struct MenuSection<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Image(systemName: "play.fill")
+                Image("ic_triangle_section_title")
                     .resizable()
+                    .scaledToFit()
                     .frame(width: 10, height: 10)
                     .foregroundColor(.white)
                 
@@ -554,10 +558,12 @@ struct MenuSection<Content: View>: View {
             }
             .padding()
             .background(Color(red: 26/255, green: 60/255, blue: 104/255))
+            .padding(.bottom, 8)
             
             VStack {
                 content()
             }
+            .padding(.top, 10)
             .background(Color(red: 245/255, green: 245/255, blue: 245/255))
         }
     }

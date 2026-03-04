@@ -60,6 +60,8 @@ struct AppRoot: View {
                 case .sobre:
                     SobreView()
                         .environmentObject(dataController)
+                case .sugestao:
+                    SuggestionsView()
                 }
                 
                 // Error Overlay

@@ -71,18 +71,27 @@ struct ContatoView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 25) {
-                        VStack(spacing: 5) {
-                            Text("Tem um recado?")
-                                .font(.custom("Spartan-Bold", size: 18))
-                                .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                        HStack {
+                            Image("bg_triangle_contact_message")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.05)
                             
-                            Text("Preencha seus dados e manda pra gente!")
-                                .font(.custom("Spartan-Regular", size: 14))
-                                .foregroundColor(.gray)
+                            Spacer()
+                            VStack(spacing: 5) {
+                                Text("Tem um recado?")
+                                    .font(.custom("Spartan-Bold", size: 18))
+                                    .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
+                                
+                                Text("Preencha seus dados e manda pra gente!")
+                                    .font(.custom("Spartan-Regular", size: 14))
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
                         }
                         .padding(.top, 20)
                         
-                        VStack(spacing: 20) {
+                        VStack(spacing: 40) {
                             HStack(spacing: 15) {
                                 formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
                                 formField(label: "E-mail:", icon: "at", placeholder: "Seu e-mail....", text: $email, field: .email, keyboard: .emailAddress)
@@ -118,59 +127,50 @@ struct ContatoView: View {
     @ViewBuilder
     private func landscapeView(geo: GeometryProxy) -> some View {
         ZStack {
-            VStack(spacing: 0) {
-                headerView
-                
-                HStack(alignment: .top, spacing: 30) {
-                    // Left Column
-                    VStack(spacing: 15) {
-                        formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
-                        formField(label: "E-mail:", icon: "at", placeholder: "Seu e-mail....", text: $email, field: .email, keyboard: .emailAddress)
-                        formField(label: "Assunto:", icon: "magnifyingglass", placeholder: "Assunto da mensagem...", text: $assunto, field: .assunto)
+            Color.white.ignoresSafeArea(.all)
+            ScrollView(showsIndicators: false){
+                LazyVStack {
+                    VStack(spacing: 0) {
+                        headerView
+                        
+                        HStack(alignment: .top, spacing: 30) {
+                            // Left Column
+                            VStack(spacing: 15) {
+                                formField(label: "Nome:", icon: "person.fill", placeholder: "Seu nome....", text: $nome, field: .nome)
+                                formField(label: "E-mail:", icon: "at", placeholder: "Seu e-mail....", text: $email, field: .email, keyboard: .emailAddress)
+                                formField(label: "Assunto:", icon: "magnifyingglass", placeholder: "Assunto da mensagem...", text: $assunto, field: .assunto)
+                            }
+                            .frame(width: geo.size.width * 0.45)
+                            
+                            // Right Column
+                            VStack(alignment: .trailing, spacing: 15) {
+                                messageField
+                                
+                                sendButton
+                                    .padding(.top, 10)
+                            }
+                        }
+                        .padding(.horizontal, 30)
+                        .padding(.top, 20)
+                        
+                        Spacer()
                     }
-                    .frame(width: geo.size.width * 0.45)
                     
-                    // Right Column
-                    VStack(alignment: .trailing, spacing: 15) {
-                        messageField
-                        
-                        sendButton
-                            .padding(.top, 10)
-                    }
-                }
-                .padding(.horizontal, 30)
-                .padding(.top, 20)
-                
-                Spacer()
-            }
-            
-            // Bottom Left stylized return button
-            VStack {
-                Spacer()
-                HStack {
-                    ZStack(alignment: .bottomLeading) {
-                        // Blue corner element
-                        Circle()
-                            .fill(Color(red: 26/255, green: 60/255, blue: 104/255))
-                            .frame(width: 140, height: 140)
-                            .offset(x: -70, y: 70)
-                        
-                        Button(action: {
-                            router.backTopLevel()
-                        }) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 28, height: 28)
-                                .foregroundColor(.white)
-                                .padding(25)
+                    // Bottom Left stylized return button
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Button(action: {
+                                router.backTopLevel()
+                            }) {
+                                returnButton
+                            }
+                            Spacer()
                         }
                     }
-                    Spacer()
                 }
             }
         }
-        .ignoresSafeArea()
     }
 
     private var messageField: some View {
@@ -193,7 +193,7 @@ struct ContatoView: View {
                     ZStack(alignment: .topLeading) {
                         if mensagem.isEmpty {
                             Text("Sua mensagem....")
-                                .foregroundColor(.gray.opacity(0.6))
+                                .foregroundColor(.black)
                                 .font(.custom("Spartan-Regular", size: 14))
                                 .padding(.top, 10)
                         }

@@ -156,7 +156,11 @@ struct ClimaView: View {
             } else if weatherSvc.isLoading && !hasData {
                 loadingView()
             } else if hasData {
-                mainContentView(geo: geo)
+                ScrollView(showsIndicators: false) {
+                    mainContentView(geo: geo)
+                        .padding(.horizontal) // Adiciona a margem padrão das laterais
+                        .padding(.bottom, 100) // Espaço para não encobrir o botão de voltar
+                }
             } else {
                 switch locManager.authStatus {
                 case .denied, .restricted:
@@ -171,7 +175,7 @@ struct ClimaView: View {
             VStack {
                 Spacer()
                 HStack {
-                    Button(action: { router.go(to: .menu) }) {
+                    Button(action: { router.backTopLevel() }) {
                         Image("btn_return")
                             .resizable()
                             .scaledToFit()
@@ -220,7 +224,7 @@ struct ClimaView: View {
             VStack {
                 Spacer()
                 HStack {
-                    Button(action: { router.go(to: .menu) }) {
+                    Button(action: { router.backTopLevel() }) {
                         Image("btn_return")
                             .resizable()
                             .scaledToFit()
@@ -244,29 +248,27 @@ struct ClimaView: View {
                         Image("bg_weather_location")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 200, height: 45)
+                            .frame(width: 200, height: 45, alignment: .leading)
 
                         HStack(spacing: 5) {
-                            Text(locManager.city ?? "Salvador")
+                            Text("\(locManager.city ?? "Salvador"),")
                                 .font(.custom("Spartan-Regular", size: 16))
                             Text(locManager.state ?? "BA")
                                 .font(.custom("Spartan-Bold", size: 16))
                         }
                         .foregroundColor(.white)
                         .padding(.trailing, 15)
-                    }
+                    }.offset(x: geo.size.width * -0.1)
 
                     Spacer()
 
                     HeaderDateTimeView()
-                        .padding(.trailing, 30)
 
                     Image("bg_triangle_nav_buttons")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 25, height: 25)
                         .padding(.top, 5)
-                        .padding(.trailing, 10)
                 }
                 .padding(.top, 10)
 
@@ -312,7 +314,7 @@ struct ClimaView: View {
                                         }
                                     } else { Text("—") }
                                 }
-                                .font(.custom("Spartan-Regular", size: 10))
+                                .font(.custom("Spartan-SemiBold", size: 10))
                                 .foregroundColor(.gray)
                                 .padding(.horizontal, 30)
                                 .padding(.top, 10)
@@ -329,7 +331,7 @@ struct ClimaView: View {
                                         }
                                     } else { Text("—") }
                                 }
-                                .font(.custom("Spartan-Regular", size: 10))
+                                .font(.custom("Spartan-SemiBold", size: 10))
                                 .foregroundColor(.gray)
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 10)
@@ -366,36 +368,38 @@ struct ClimaView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100)
+                Spacer()
 
                 VStack(alignment: .leading, spacing: -5) {
                     HStack(alignment: .top, spacing: 0) {
                         Text("\(displayTemp)")
-                            .font(.custom("Spartan-Bold", size: 70))
+                            .font(.custom("Spartan-Bold", size: 90))
                             .foregroundColor(.white)
 
                         Text("°C")
-                            .font(.custom("Spartan-Bold", size: 24))
+                            .font(.custom("Spartan-Bold", size: 30))
                             .foregroundColor(.white)
-                            .padding(.top, 15)
+                            .padding(.top, 20)
                     }
+                    .padding(.bottom, 10)
 
                     Text(selectedDesc)
-                        .font(.custom("Spartan-Bold", size: 22))
+                        .font(.custom("Spartan-Bold", size: 26))
                         .foregroundColor(.white)
+                        .padding(.bottom, 5)
 
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.up.arrow.down")
                             .font(.system(size: 14, weight: .bold))
 
                         Text("\(selectedMaxTemp)° | \(selectedMinTemp)°")
-                            .font(.custom("Spartan-Bold", size: 16))
+                            .font(.custom("Spartan-Bold", size: 20))
                     }
                     .foregroundColor(.white)
                     .padding(.top, 5)
                 }
+                .shadow(color: Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.8), radius: 1, x: 1, y: 1)
                 .padding(.leading, 20)
-
-                Spacer()
             }
             .frame(width: geo.size.width * 0.32)
             .clipped()
@@ -428,7 +432,8 @@ struct ClimaView: View {
                 Image(selectedIcon)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.4 : geo.size.width * 0.3)
+                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.45 : geo.size.width * 0.35)
+                    .frame(height: UIDevice.current.userInterfaceIdiom == .phone ? 180 : 250) // Altura fixa para não empurrar o layout
                     .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
 
                 Spacer()
@@ -436,20 +441,22 @@ struct ClimaView: View {
                 VStack(alignment: .trailing, spacing: 0) {
                     HStack(alignment: .top, spacing: 0) {
                         Text("\(displayTemp)")
-                            .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 50 : 70))
+                            .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 70 : 90))
                             .foregroundColor(.white)
 
                         VStack(alignment: .leading, spacing: 5) {
                             Text("°C")
-                                .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 20 : 40))
+                                .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 24 : 44))
                                 .foregroundColor(.white)
-                                .padding(.top, 15)
+                                .padding(.top, 20)
                         }
                     }
+                    .padding(.bottom, 10) // Mais distância entre temperatura e descrição
 
                     Text(selectedDesc)
-                        .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 14 : 20))
+                        .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 20 : 28))
                         .foregroundColor(.white)
+                        .padding(.bottom, 5) // Mais distância entre descrição e min/max
 
                     HStack {
                         Image(systemName: "arrow.up")
@@ -464,8 +471,9 @@ struct ClimaView: View {
                         Text("\(selectedMinTemp)°")
                             .foregroundColor(.white)
                     }
-                    .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 12 : 16))
+                    .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 16 : 22))
                 }
+                .shadow(color: Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.8), radius: 1, x: 1, y: 1)
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
@@ -475,10 +483,10 @@ struct ClimaView: View {
                     Image("bg_weather_location")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 180)
+                        .frame(width: 180, alignment: .leading)
 
                     HStack {
-                        Text(locManager.city ?? "Salvador")
+                        Text("\(locManager.city ?? "Salvador"),")
                             .font(.custom("Spartan-Regular", size: 16))
                         Text(locManager.state ?? "BA")
                             .font(.custom("Spartan-Bold", size: 16))
@@ -490,23 +498,23 @@ struct ClimaView: View {
                 Spacer()
 
                 HeaderDateTimeView()
-                    .padding(.trailing)
 
                 Image("bg_triangle_nav_buttons")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: geo.size.width * 0.07, height: geo.size.height * 0.05)
+                    .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.04)
+                    .padding(.trailing, 10) // Mesma margem dos demais elementos
             }
 
             Divider().padding(.horizontal)
 
             ZStack {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(Color(white: 0.96))
-                    .frame(height: 110)
-                    .padding(.horizontal, 20)
+                RoundedRectangle(cornerRadius: 1)
+                    .stroke(Color(red: 26/255, green: 60/255, blue: 104/255).opacity(0.3), lineWidth: 0)
+                    .background(Color(white: 0.98))
+                    .frame(height: 105)
 
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     if daysToShow.isEmpty {
                         ForEach(0..<5, id: \.self) { _ in
                             ForecastBox(day: "—", icon: "ic_sunny", tempMax: "—", tempMin: "—", isActive: false, onTap: {})
@@ -524,6 +532,7 @@ struct ClimaView: View {
                         }
                     }
                 }
+                .padding(.horizontal, 10) // Distância pequena da borda do card, sem estourar
             }
             .padding(.vertical, 10)
 
@@ -547,7 +556,7 @@ struct ClimaView: View {
                                 }
                             }
                         }
-                        .font(.custom("Spartan-Regular", size: 10))
+                        .font(.custom("Spartan-SemiBold", size: 10))
                         .foregroundColor(.gray)
                         .padding(.horizontal, 30)
                         .padding(.top, 10)
@@ -564,7 +573,7 @@ struct ClimaView: View {
                                 }
                             }
                         }
-                        .font(.custom("Spartan-Regular", size: 10))
+                        .font(.custom("Spartan-SemiBold", size: 10))
                         .foregroundColor(.gray)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 10)
@@ -578,13 +587,13 @@ struct ClimaView: View {
                 Image("bg_card_weather_stats_bar")
                     .resizable()
                     .scaledToFit()
-                    .padding(.horizontal, 20)
 
-                HStack(spacing: -20) {
+                HStack(spacing: 0) {
                     StatItem(icon: "ic_precipitation", value: "\(weatherSvc.precipProbPct ?? 0)%", isLast: false)
                     StatItem(icon: "ic_humidity", value: "\(weatherSvc.humidityPct ?? 0)%", isLast: false)
                     StatItem(icon: "ic_wind", value: "\(weatherSvc.windKmh ?? 0)km/h", isLast: true)
                 }
+                .padding(.horizontal, 30)
             }
             .padding(.bottom, 40)
         }
@@ -754,7 +763,7 @@ struct ForecastBox: View {
                 .font(.custom("Spartan-Regular", size: 10))
                 .foregroundColor(isActive ? .white : .gray)
             }
-            .frame(width: 65, height: 90)
+            .frame(width: 58, height: 85)
             .background(isActive ? Color(red: 26/255, green: 60/255, blue: 104/255) : Color.white)
             .cornerRadius(3)
             .overlay(

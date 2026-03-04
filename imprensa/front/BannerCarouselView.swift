@@ -19,6 +19,9 @@ struct BannerCarouselView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
+                let isLandscape = geo.size.width > geo.size.height
+                let leadingPadding: CGFloat = isLandscape ? geo.size.width * 0.3 : geo.size.width * 0.04
+                
                 HStack(spacing: UIDevice.current.userInterfaceIdiom == .phone ? -70 : 25) {
                     ForEach(0..<banners.count, id: \.self) { index in
                         GeometryReader { cardGeo in
@@ -45,7 +48,7 @@ struct BannerCarouselView: View {
                                     } else {
                                         Image(banners[index])
                                             .resizable()
-                                            .scaledToFit() // Voltei para fit para não cortar as bordas
+                                            .scaledToFit() 
                                             .frame(width: cardWidth, height: cardHeight)
                                             .cornerRadius(12)
                                     }
@@ -53,10 +56,10 @@ struct BannerCarouselView: View {
                                 .buttonStyle(PlainButtonStyle())
                             }
                             .onAppear {
-                                updateIndex(cardGeo: cardGeo, index: index, totalWidth: geo.size.width)
+                                updateIndex(cardGeo: cardGeo, index: index, totalWidth: geo.size.width, leadingPadding: leadingPadding)
                             }
                             .onChange(of: cardGeo.frame(in: .global).minX) { _ in
-                                updateIndex(cardGeo: cardGeo, index: index, totalWidth: geo.size.width)
+                                updateIndex(cardGeo: cardGeo, index: index, totalWidth: geo.size.width, leadingPadding: leadingPadding)
                             }
                         }
                         .frame(width: {
@@ -73,7 +76,8 @@ struct BannerCarouselView: View {
                         }())
                     }
                 }
-                .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 10)
+                .padding(.leading, leadingPadding)
+                .padding(.trailing, 80) // Padding extra no final para permitir que o último card role bem
             }
             .frame(height: {
                 let isLandscape = geo.size.width > geo.size.height
@@ -99,11 +103,13 @@ struct BannerCarouselView: View {
         }
     }
     
-    private func updateIndex(cardGeo: GeometryProxy, index: Int, totalWidth: CGFloat) {
-        let midX = cardGeo.frame(in: .global).midX
-        let center = totalWidth / 2
-        // Se o centro do card estiver perto do centro da tela, ele é o atual
-        if abs(midX - center) < (totalWidth * 0.3) {
+    private func updateIndex(cardGeo: GeometryProxy, index: Int, totalWidth: CGFloat, leadingPadding: CGFloat) {
+        let minX = cardGeo.frame(in: .global).minX
+        // Com o espaçamento negativo (-70), o ponto onde o card é considerado "ativo" no leading 
+        // precisa ser um pouco mais flexível.
+        let threshold: CGFloat = 80 
+        
+        if abs(minX - leadingPadding) < threshold {
             if currentIndex != index {
                 currentIndex = index
             }

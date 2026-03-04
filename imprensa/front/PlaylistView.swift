@@ -13,12 +13,14 @@ struct PlaylistView: View {
     @State private var showingSearchSheet = false
     
     var body: some View {
-        ZStack {
-            Color("azulEscuro")
-                .edgesIgnoringSafeArea(.bottom)
-            Color.white
-                .edgesIgnoringSafeArea(.top)
-            Color.white
+        GeometryReader { geo in
+            let isLandscape = geo.size.width > geo.size.height
+            let columns = isLandscape ? 
+                [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)] : 
+                [GridItem(.flexible())]
+
+            ZStack {
+                Color.white.ignoresSafeArea(.all)
             
             VStack(spacing: 0) {
                 // Header
@@ -26,22 +28,6 @@ struct PlaylistView: View {
                 
                 // Nova Playlist Button
                 HStack {
-                    Button(action: {
-                        showingSearchSheet = true
-                    }) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "magnifyingglass.circle.fill")
-                                .resizable()
-                                .frame(width: 24, height: 24)
-                                .foregroundColor(.gray)
-                            Text("BUSCAR")
-                                .font(.custom("Spartan-Bold", size: 14))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .padding(.leading, 20)
-                    .padding(.top, 10)
-                    
                     Spacer()
                     
                     Button(action: {
@@ -53,36 +39,37 @@ struct PlaylistView: View {
                                 .font(.custom("Spartan-Bold", size: 14))
                                 .foregroundColor(.gray)
                             
-                            Image(systemName: "plus.square.fill")
+                            Image("btn_new_playlist")
                                 .resizable()
+                                .scaledToFit()
                                 .frame(width: 24, height: 24)
                                 .foregroundColor(.gray)
                         }
                     }
                     .padding(.trailing, 20)
-                    .padding(.top, 10)
+                    .padding(.vertical, 10)
                 }
                 
                 // Playlist List
                 ScrollView {
-                    VStack(spacing: 20) {
-                        if playlistManager.playlists.isEmpty {
-                            VStack(spacing: 15) {
-                                Image(systemName: "music.note.list")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.gray.opacity(0.5))
-                                
-                                Text("VOCÊ AINDA NÃO POSSUI PLAYLISTS")
-                                    .font(.custom("Spartan-Bold", size: 14))
-                                    .foregroundColor(.gray.opacity(0.7))
-                                    .multilineTextAlignment(.center)
-                                
-                                Text("Toque em 'NOVA PLAYLIST' para começar.")
-                                    .font(.custom("Spartan-Regular", size: 12))
-                                    .foregroundColor(.gray.opacity(0.5))
-                            }
-                            .padding(.top, 100)
-                        } else {
+                    if playlistManager.playlists.isEmpty {
+                        VStack(spacing: 15) {
+                            Image(systemName: "music.note.list")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray.opacity(0.5))
+                            
+                            Text("VOCÊ AINDA NÃO POSSUI PLAYLISTS")
+                                .font(.custom("Spartan-Bold", size: 14))
+                                .foregroundColor(.gray.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Toque em 'NOVA PLAYLIST' para começar.")
+                                .font(.custom("Spartan-Regular", size: 12))
+                                .foregroundColor(.gray.opacity(0.5))
+                        }
+                        .padding(.top, 100)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(playlistManager.playlists) { playlist in
                                 PlaylistRow(playlist: playlist) {
                                     selectedPlaylist = playlist
@@ -95,8 +82,9 @@ struct PlaylistView: View {
                                 }
                             }
                         }
+                        .padding(.horizontal, isLandscape ? 10 : 0)
+                        .padding(.top, 20)
                     }
-                    .padding(.top, 20)
                 }
             }
             
@@ -127,8 +115,11 @@ struct PlaylistView: View {
                      isEditing = true
                      showingCreateModal = true
                  }
-                 .transition(.move(edge: .trailing))
-                 .zIndex(2)
+                  .transition(.asymmetric(
+                      insertion: .move(edge: .trailing),
+                      removal: .opacity.combined(with: .move(edge: .leading))
+                  )) // Transição mais suave sem efeito de 'puxão'
+                  .zIndex(2)
             }
             
             // Create/Edit Modal
@@ -160,6 +151,7 @@ struct PlaylistView: View {
                 .zIndex(3)
             }
         }
+        }
         .sheet(isPresented: $showingSearchSheet) {
             AddSongSheet(playlistId: nil) // Global search
         }
@@ -188,6 +180,7 @@ struct PlaylistView: View {
                 .fill(Color.gray.opacity(0.3))
                 .frame(height: 1)
                 .padding(.horizontal, 20)
+                .padding(.bottom)
         }
     }
 }
@@ -209,9 +202,10 @@ struct PlaylistRow: View {
                 Button(action: onEdit) {
                     ZStack {
                         Rectangle().fill(Color.gray)
-                        Image(systemName: "pencil")
-                            .foregroundColor(.white)
-                            .font(.title2)
+                        Image("ic_edit_playlist")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
                     }
                 }
                 .frame(width: 60)
@@ -219,9 +213,10 @@ struct PlaylistRow: View {
                 Button(action: onDelete) {
                     ZStack {
                         Rectangle().fill(Color.red)
-                        Image(systemName: "trash.fill")
-                            .foregroundColor(.white)
-                            .font(.title2)
+                        Image("ic_delete_playlist")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
                     }
                 }
                 .frame(width: 60)
@@ -242,11 +237,11 @@ struct PlaylistRow: View {
                         maskImageName: "Polygon 12",
                         fallbackImageName: "Polygon 12"
                     )
-                    .frame(width: 100, height: 90)
+                    .frame(width: 110, height: 90)
                     .clipped()
                    
                 }
-                .frame(width: 100, height: 90)
+                .frame(width: 108, height: 90)
                 .clipped()
                 .zIndex(1)
                 
@@ -260,7 +255,7 @@ struct PlaylistRow: View {
                             .font(.custom("Spartan-Regular", size: 10))
                             .foregroundColor(.white.opacity(0.7))
                     }
-                    .padding(.leading, 20)
+                    .padding(.leading, 40)
                     
                     Spacer()
                     
@@ -367,7 +362,7 @@ struct PlaylistDetailView: View {
                     maskImageName: "img_playlist_cover",
                     fallbackImageName: "img_playlist_cover"
                 )
-                .frame(height: 300)
+                .frame(width: geo.size.width - 60, height: 300) // Força largura relativa para estabilidade
                 .clipped()
                 .padding(.leading, 60)
                 
@@ -377,7 +372,7 @@ struct PlaylistDetailView: View {
                     detailActionButton(icon: "btn_edit_playlist") { onEdit() }
                     detailActionButton(icon: "btn_delete_playlist") { onDelete() }
                 }
-                .padding(.leading, 20)
+                .padding(.leading, 15) // Afastado um pouco da borda para dar margem à capa
                 .padding(.bottom, 120)
                 .offset(y: geo.size.height * 0.05)
                 
@@ -436,11 +431,13 @@ struct PlaylistDetailView: View {
                         .padding(.trailing, 20)
                     }
                 }
-                .frame(height: 100)
+                .frame(width: geo.size.width - 80, height: 100) // Largura fixa proporcional para não estourar
                 .padding(.leading, 60)
                 .padding(.trailing, 20)
                 .offset(y: 50)
+                .zIndex(5)
             }
+            .frame(maxWidth: .infinity, alignment: .bottomLeading)
             .ignoresSafeArea(edges: .top)
             
             // Song List
@@ -468,6 +465,8 @@ struct PlaylistDetailView: View {
             .background(Color(red: 240/255, green: 240/255, blue: 240/255))
             .padding(.top, 50)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
     }
 
     @ViewBuilder
@@ -551,7 +550,7 @@ struct PlaylistDetailView: View {
                     .padding(.vertical, 20)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: geo.size.width * 0.55) // Ajustado para ocupar a outra metade
             .background(Color(red: 245/255, green: 245/255, blue: 245/255))
         }
     }
@@ -613,8 +612,7 @@ struct SongRow: View {
                     }
                     Button(action: onAddToPlaylist) {
                         Image(systemName: "plus.square")
-                            .rotationEffect(.degrees(90))
-                            .font(.title3)
+                            .font(.system(size: 20)) // Tamanho um pouco maior
                             .foregroundColor(.gray)
                     }
                     Button(action: {
@@ -630,9 +628,10 @@ struct SongRow: View {
                         }
                     }) {
                         ZStack {
-                            Image(systemName: (ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) && ytPlayer.isPlaying) ? "pause.fill" : "play.fill")
+                            Image(ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) && ytPlayer.isPlaying ? "pause_playlist" : "btn_playlist_song_play")
                                 .resizable()
-                                .frame(width: (ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) && ytPlayer.isPlaying) ? 20 : 18, height: 24)
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
                                 .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                             
                             if ytPlayer.isLoading && ytPlayer.currentKey == YouTubeBackgroundPlayer.normalizedKey(artist: song.artist, song: song.title) {
@@ -641,6 +640,7 @@ struct SongRow: View {
                             }
                         }
                     }
+                    .buttonStyle(PlainButtonStyle()) // Garante que não haja estilo de botão com arredondamento
                     .padding(.trailing, 10)
                 }
             }

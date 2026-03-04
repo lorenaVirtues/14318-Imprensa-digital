@@ -11,7 +11,7 @@ struct WeatherCardView: View {
             Image(weatherSvc.condition?.cardBackgroundName ?? "card_view_weather_main")
                 .resizable()
                 .scaledToFit()
-                .frame(width: width * 0.9, height: height, alignment: .top)
+                .frame(width: width * 0.9, height: height, alignment: .leading)
             
             // Content Overlay
             HStack {
@@ -35,16 +35,21 @@ struct WeatherCardView: View {
                     }
                     .padding(.top, 10) // Offset to center in the blue box part
                     
-                    Text("Pred. \(weatherSvc.condition?.description ?? "—")")
-                        .font(.custom("Spartan-Regular", size: 14))
-                        .foregroundColor(.white)
+                    MarqueeText(
+                        text: "Pred. \(weatherSvc.condition?.description ?? "—")",
+                        font: .custom("Spartan-Regular", size: 14),
+                        color: .white
+                    )
+                    .scaledToFit()
+                    .frame(width: 70, height: 16, alignment: .leading)
+                    .padding(.top, 2)
                     
                     // Min/Max indicator
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.arrow.down")
                             .font(.system(size: 10, weight: .bold))
                         Text("\(weatherSvc.maxTemp ?? 0)° | \(weatherSvc.minTemp ?? 0)°")
-                            .font(.custom("Spartan-Bold", size: 12))
+                            .font(.custom("Spartan-Regular", size: 12))
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -85,9 +90,9 @@ struct WeatherCardView: View {
                     .foregroundColor(.white)
                     .padding(.top, 5)
                 }
-                .padding(.leading, UIDevice.current.userInterfaceIdiom == .phone ? 60 : 40) // Adjusted to align inside the blue part
+                .padding(.leading, UIDevice.current.userInterfaceIdiom == .phone ? 20 : 40) // Adjusted to align inside the blue part
                 .padding(.top, UIDevice.current.userInterfaceIdiom == .phone ? 20 : 0)
-                .frame(width: width * 0.7, height: height * 0.5)
+                .frame(width: width * 0.5, height: height * 0.5)
                 Spacer()
             }
         }

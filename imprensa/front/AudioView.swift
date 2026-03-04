@@ -14,7 +14,7 @@ struct AudioView: View {
     @EnvironmentObject var radioPlayer: RadioPlayer
     @EnvironmentObject var router: NavigationRouter
     
-
+    @StateObject private var systemVolume = SystemVolume()
     
     let height = UIScreen.main.bounds.size.height
     let width = UIScreen.main.bounds.size.width
@@ -63,24 +63,27 @@ struct AudioView: View {
                         .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * -0.25)
                     
                     ZStack {
+                        if !dataController.minimalMode {
+                            LottieView(animationName: "traco_capa_de_album_player")
+                                .scaledToFit()
+                                .scaleEffect(1.5)
+                                .offset(x: geo.size.width * 0.16, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.115 : geo.size.height * -0.3)
+                        }
                         AlbumArtworkView(
                             artwork: radioPlayer.albumArtwork,
                             maskImageName: UIDevice.current.userInterfaceIdiom == .phone ? "img_song_cover" : "forma_capa_de_album"
                         )
                         .scaledToFit()
-                        
-                        if !dataController.minimalMode {
-                            LottieView(animationName: "traco_capa_de_album_player")
-                                .scaledToFit()
-                                .scaleEffect(1.5)
-                                .offset(x: geo.size.width * 0.16, y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * -0.12 : geo.size.height * -0.3)
-                        }
                     }
                     .offset(y: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.0 : geo.size.height * -0.15)
                     
                     
                     // Barra de Volume Diagonal
                     ZStack(alignment: .leading) {
+                        // Driver oficial invisível para sincronizar com o hardware
+                        SystemVolumeMPDriver(value: $systemVolume.value)
+                            .frame(width: 0, height: 0)
+                        
                         // Track Total (Cinza)
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
@@ -88,13 +91,13 @@ struct AudioView: View {
                         
                         Rectangle()
                             .fill(Color(red: 26/255, green: 60/255, blue: 114/255))
-                            .frame(width: CGFloat(radioPlayer.volume) * (geo.size.width * 0.6), height: 5)
+                            .frame(width: CGFloat(systemVolume.value) * (geo.size.width * 0.6), height: 5)
                         
                         // Botão (Thumb)
                         Rectangle()
                             .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
                             .frame(width: 12, height: 20)
-                            .offset(x: CGFloat(radioPlayer.volume) * (geo.size.width * 0.6) - 6)
+                            .offset(x: CGFloat(systemVolume.value) * (geo.size.width * 0.6) - 6)
                         
                         // Área de Toque Ampliada (Invisível)
                         Rectangle()
@@ -105,8 +108,9 @@ struct AudioView: View {
                                 DragGesture(minimumDistance: 0)
                                     .onChanged { gesture in
                                         let translation = gesture.location.x
-                                        let newVolume = Float(translation / (geo.size.width * 0.6))
-                                        radioPlayer.volume = max(0, min(1, newVolume))
+                                        let newValue = Double(translation / (geo.size.width * 0.6))
+                                        systemVolume.value = max(0, min(1, newValue))
+                                        radioPlayer.volume = Float(systemVolume.value)
                                     }
                             )
                     }
@@ -125,7 +129,7 @@ struct AudioView: View {
                             .frame(width: geo.size.width * 0.3, height: geo.size.height * 0.25, alignment: .leading)
                         
                         HStack(alignment: .bottom, spacing: 2) {
-                            Text("\(Int(radioPlayer.volume * 100))")
+                            Text("\(Int(systemVolume.value * 100))")
                                 .font(.custom("Spartan-Regular", size: 28))
                             Text("%")
                                 .font(.custom("Spartan-Regular", size: 12))
@@ -181,14 +185,14 @@ struct AudioView: View {
                 }
                 
                 HStack{
-                    VStack (alignment: .leading){
-                        VStack (alignment: .leading, spacing: UIDevice.current.userInterfaceIdiom == .phone ? 0 : 20){
+                    VStack (alignment: .leading, spacing: 20){
+                        VStack (alignment: .leading, spacing: UIDevice.current.userInterfaceIdiom == .phone ? 10 : 20){
                             Text(radioPlayer.itemMusic)
-                                .font(.custom("Spartan-Bold", size: 16))
+                                .font(.custom("Spartan-Bold", size: 18))
                                 .foregroundColor(Color.black)
                             
                             Text(radioPlayer.itemArtist)
-                                .font(.custom("Spartan-Regular", size: 16))
+                                .font(.custom("Spartan-Regular", size: 18))
                                 .foregroundColor(Color.black)
                         }
                         
@@ -233,13 +237,13 @@ struct AudioView: View {
                     .padding(.leading, 10)
                     Spacer()
                 }
-                .offset(y: geo.size.height * 0.2)
+                .offset(y: geo.size.height * 0.15)
                 
                 Spacer()
                 
                 HStack{
                     Button(action:{
-                        router.goHome()
+                        router.popOrBack()
                     }, label:{
                         Image("btn_return")
                             .resizable()
@@ -263,6 +267,10 @@ struct AudioView: View {
                 Spacer()
                 
                 ZStack(alignment: .leading) {
+                    // Driver oficial invisível para sincronizar com o hardware
+                    SystemVolumeMPDriver(value: $systemVolume.value)
+                        .frame(width: 0, height: 0)
+                    
                     // Track Total (Cinza)
                     Rectangle()
                         .fill(Color.gray.opacity(0.3))
@@ -270,13 +278,13 @@ struct AudioView: View {
                     
                     Rectangle()
                         .fill(Color(red: 26/255, green: 60/255, blue: 114/255))
-                        .frame(width: CGFloat(radioPlayer.volume) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4), height: 5)
+                        .frame(width: CGFloat(systemVolume.value) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4), height: 5)
                     
                     // Botão (Thumb)
                     Rectangle()
                         .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
                         .frame(width: 12, height: 20)
-                        .offset(x: CGFloat(radioPlayer.volume) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4) - 6)
+                        .offset(x: CGFloat(systemVolume.value) * (UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.4) - 6)
                         .zIndex(1000)
                     
                     // Área de Toque Ampliada (Invisível)
@@ -288,8 +296,10 @@ struct AudioView: View {
                             DragGesture(minimumDistance: 0)
                                 .onChanged { gesture in
                                     let translation = gesture.location.x
-                                    let newVolume = Float(translation / (geo.size.width * 0.6))
-                                    radioPlayer.volume = max(0, min(1, newVolume))
+                                    let factor = UIDevice.current.userInterfaceIdiom == .phone ? 0.3 : 0.4
+                                    let newValue = Double(translation / (geo.size.width * factor))
+                                    systemVolume.value = max(0, min(1, newValue))
+                                    radioPlayer.volume = Float(systemVolume.value)
                                 }
                         )
                 }
@@ -385,7 +395,7 @@ struct AudioView: View {
                             .rotationEffect(.degrees(90))
                         
                         HStack(alignment: .bottom, spacing: 2) {
-                            Text("\(Int(radioPlayer.volume * 100))")
+                            Text("\(Int(systemVolume.value * 100))")
                                 .font(.custom("Spartan-Regular", size: 28))
                             Text("%")
                                 .font(.custom("Spartan-Regular", size: 12))
@@ -403,7 +413,7 @@ struct AudioView: View {
                     VStack{
                         Spacer()
                         Button(action:{
-                            router.goHome()
+                            router.popOrBack()
                         }, label:{
                             Image("btn_return")
                                 .resizable()
@@ -428,6 +438,9 @@ struct AudioView: View {
                     Spacer()
                 }
             }
+        }
+        .onAppear {
+            SystemVolume.ensureAudioSessionActive()
         }
     }
     

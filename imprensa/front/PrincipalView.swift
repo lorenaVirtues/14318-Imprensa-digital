@@ -121,11 +121,15 @@ struct PrincipalView: View {
             )
         }
         .onReceive(dataController.$appData) { appData in
-            if let streaming = appData?.app.radios.first?.streaming {
-                let model = RadioModel(streamUrl: streaming)
+            if let firstRadio = appData?.app.radios.first {
+                let streaming = firstRadio.streaming
+                let redundancia = firstRadio.redundancia
+                
+                let model = RadioModel(streamUrl: streaming, redundanciaUrl: redundancia)
                 self.radio = model
                 
                 if let url = URL(string: streaming) {
+                    let redundancyURL = URL(string: redundancia)
                     let isFirstTime = !launchTracker.didStartRadio
                     let currentURL = (radioPlayer.player?.currentItem?.asset as? AVURLAsset)?.url
                     let isDifferentURL = currentURL != url
@@ -133,8 +137,8 @@ struct PrincipalView: View {
                     if isFirstTime || isDifferentURL {
                         if isFirstTime { launchTracker.didStartRadio = true }
                         
-                        // Inicializa o player
-                        radioPlayer.initPlayer(url: url)
+                        // Inicializa o player com redundância
+                        radioPlayer.initPlayer(url: url, redundancy: redundancyURL)
                         
                         if isFirstTime {
                             if UserDefaults.autoplayEnabled {
@@ -156,14 +160,8 @@ struct PrincipalView: View {
     
     @ViewBuilder
     private func portrait(geo: GeometryProxy) -> some View {
-        Color("azul")
-            .edgesIgnoringSafeArea(.bottom)
-        
-        Color(.white)
-            .edgesIgnoringSafeArea(.top)
-        
         ZStack{
-            Color.white
+            Color.white.ignoresSafeArea(.all)
             
             ScrollView (showsIndicators: false){
                 LazyVStack{
@@ -173,11 +171,12 @@ struct PrincipalView: View {
                                   .resizable()
                                   .scaledToFit()
                                   .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
+                                  .scaleEffect(1.0)
                         } else {
                             LottieView(animationName: "logotipo")
                                 .scaledToFit()
                                 .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
-                                .scaleEffect(2.0)
+                                .scaleEffect(UIDevice.current.userInterfaceIdiom == .phone ? 2.5 : 2.0)
                         }
                        
                         Spacer()
@@ -255,7 +254,6 @@ struct PrincipalView: View {
                     BannerCarouselView(geo: geo) { bannerName in
                         handleBannerTap(bannerName)
                     }
-                    .frame(width: geo.size.width * 0.9)
                     .padding(.top, 5)
                     
                     bannerView(webView: banner.webView)
@@ -264,7 +262,6 @@ struct PrincipalView: View {
                     
                     Divider()
                         .foregroundColor(.gray)
-                        .padding(.vertical)
                         .padding(.horizontal, 20)
                     
                     ZStack {
@@ -296,7 +293,7 @@ struct PrincipalView: View {
                                             Image("btn_add_playlist_active_principal")
                                                 .resizable()
                                                 .scaledToFit()
-                                                .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.06 : geo.size.width * 0.08, height: geo.size.height * 0.05)
                                         })
                                         
                                         Button(action:{
@@ -307,7 +304,7 @@ struct PrincipalView: View {
                                             Image("btn_mute")
                                                 .resizable()
                                                 .scaledToFit()
-                                                .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.06 : geo.size.width * 0.08, height: geo.size.height * 0.05)
                                                 .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                         })
                                         
@@ -319,7 +316,7 @@ struct PrincipalView: View {
                                                 Image("icone_comandos")
                                                     .resizable()
                                                     .scaledToFit()
-                                                    .frame(width: geo.size.width * 0.08, height: geo.size.height * 0.05)
+                                                    .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.06 : geo.size.width * 0.08, height: geo.size.height * 0.05)
                                                     .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                                 
                                                 if speechManager.isListening {
@@ -407,7 +404,7 @@ struct PrincipalView: View {
                                             )
                                             .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.35, height: geo.size.height * 0.35)
                                             .scaleEffect(1.1)
-                                            .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.0 : geo.size.width * 0.1, y: geo.size.height * -0.02)
+                                            .offset(x: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.01 : geo.size.width * 0.1, y: geo.size.height * -0.02)
                                             
                                             
                                             if dataController.minimalMode {
@@ -417,7 +414,7 @@ struct PrincipalView: View {
                                                     .scaledToFill()
                                                     .frame(width: geo.size.width * 0.55, height: geo.size.height * 0.35)
                                                     .scaleEffect(1.3)
-                                                    .offset(x: geo.size.width * 0.17, y: geo.size.height * 0.01)
+                                                    .offset(x: geo.size.width * 0.18, y: geo.size.height * 0.01)
                                             }
                                         }
                                     }
@@ -463,6 +460,7 @@ struct PrincipalView: View {
                     Divider()
                         .foregroundColor(.gray)
                         .padding(.horizontal, 20)
+                        .padding(.vertical)
                     
                     HStack{
                         Image("btn_nav_home_active")
@@ -535,22 +533,23 @@ struct PrincipalView: View {
                     Divider()
                         .foregroundColor(.gray)
                         .padding(.horizontal, 20)
+                        .padding(.bottom)
                     
                     // Now Playing Section for Landscape
                     HStack(alignment: .center, spacing: 20) {
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 40) {
                             Image("bg_title_playing_now")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: geo.size.width * 0.25, height: geo.size.height * 0.05)
+                                .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.3 : geo.size.width * 0.25, height: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.height * 0.08 : geo.size.height * 0.05, alignment: .leading)
                             
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(radioPlayer.itemMusic)
-                                    .font(.custom("Spartan-Bold", size: 18))
+                                    .font(.custom("Spartan-Bold", size: UIDevice.current.userInterfaceIdiom == .phone ? 22 : 18))
                                     .foregroundColor(.black)
                                 
                                 Text(radioPlayer.itemArtist)
-                                    .font(.custom("Spartan-Regular", size: 16))
+                                    .font(.custom("Spartan-Regular", size: UIDevice.current.userInterfaceIdiom == .phone ? 20 : 16))
                                     .foregroundColor(.black)
                             }
                             .padding(.vertical, 5)
@@ -560,7 +559,7 @@ struct PrincipalView: View {
                                     Image("btn_add_playlist_active_principal")
                                         .resizable()
                                         .scaledToFit()
-                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.08)
                                 }
                                 
                                 Button(action: {
@@ -571,7 +570,7 @@ struct PrincipalView: View {
                                     Image("btn_mute")
                                         .resizable()
                                         .scaledToFit()
-                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                        .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.08)
                                         .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                 }
                                 
@@ -583,7 +582,7 @@ struct PrincipalView: View {
                                         Image("icone_comandos")
                                             .resizable()
                                             .scaledToFit()
-                                            .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.1)
+                                            .frame(width: geo.size.width * 0.06, height: geo.size.height * 0.08)
                                             .opacity(radioPlayer.isMuted ? 0.5 : 1.0)
                                         
                                         if speechManager.isListening {

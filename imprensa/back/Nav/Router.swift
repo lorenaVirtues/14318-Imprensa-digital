@@ -10,6 +10,7 @@ enum Route: Hashable {
     case clima
     case playlist
     case sobre
+    case sugestao
 }
 
 final class NavigationRouter: ObservableObject {

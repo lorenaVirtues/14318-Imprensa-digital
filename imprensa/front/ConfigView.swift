@@ -222,18 +222,18 @@ struct ConfigView: View {
             
             VStack{
                 HStack{
-                    if isMinimalMode {
+                    if dataController.minimalMode {
                         Image("logo")
                               .resizable()
                               .scaledToFit()
                               .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
+                              .scaleEffect(1.0)
                     } else {
                         LottieView(animationName: "logotipo")
                             .scaledToFit()
                             .frame(width: UIDevice.current.userInterfaceIdiom == .phone ? geo.size.width * 0.55 : geo.size.width * 0.4, height: geo.size.height * 0.12)
-                            .scaleEffect(2.0)
+                            .scaleEffect(UIDevice.current.userInterfaceIdiom == .phone ? 2.5 : 2.0)
                     }
-                     
                     
                     Spacer()
                     
@@ -335,9 +335,10 @@ struct ConfigView: View {
                                             .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                                     }
                                     
-                                    CustomSlider(value: $audioBalance, range: 0...1, onEnded: {
+                                    CustomSlider(value: $audioBalance, range: 0...1, style: .thick, onEnded: {
                                         activeAlert = .generic(title: "Balanço de Áudio", message: "Você também pode ajustar o balanço do sistema em Ajustes do aparelho.")
                                     })
+                                    .padding(.horizontal, 30)
                                     
                                     HStack {
                                         Text("Esquerdo")
@@ -372,8 +373,11 @@ struct ConfigView: View {
                                 Divider().padding(.horizontal)
                                 
                                 VStack(alignment: .leading, spacing: 10) {
-                                    HStack {
+                                    HStack(spacing: 15) {
                                         Image("icone_inatiivdade")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20)
                                             .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                                         Text("• Inatividade")
                                             .font(.custom("Spartan-Bold", size: 14))
@@ -384,7 +388,8 @@ struct ConfigView: View {
                                         .font(.custom("Spartan-Regular", size: 12))
                                         .foregroundColor(.gray)
                                     
-                                    CustomSlider(value: $inactivityTime, range: 5...30)
+                                    CustomSlider(value: $inactivityTime, range: 5...30, style: .thin)
+                                        .padding(.horizontal, 30)
                                     
                                     HStack {
                                         Text("05")
@@ -477,7 +482,7 @@ struct ConfigView: View {
                                      
                             }
                         }
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 5)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -607,9 +612,10 @@ struct ConfigView: View {
                                             .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                                     }
                                     
-                                    CustomSlider(value: $audioBalance, range: 0...1, onEnded: {
+                                    CustomSlider(value: $audioBalance, range: 0...1, style: .thick, onEnded: {
                                         activeAlert = .generic(title: "Balanço de Áudio", message: "Você também pode ajustar o balanço do sistema em Ajustes do aparelho.")
                                     })
+                                    .padding(.horizontal, 30)
                                     
                                     HStack {
                                         Text("Esquerdo")
@@ -644,8 +650,11 @@ struct ConfigView: View {
                                 Divider().padding(.horizontal)
                                 
                                 VStack(alignment: .leading, spacing: 10) {
-                                    HStack {
+                                    HStack(spacing: 15) {
                                         Image("icone_inatiivdade")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 20)
                                             .foregroundColor(Color(red: 26/255, green: 60/255, blue: 104/255))
                                         Text("• Inatividade")
                                             .font(.custom("Spartan-Bold", size: 14))
@@ -656,7 +665,8 @@ struct ConfigView: View {
                                         .font(.custom("Spartan-Regular", size: 12))
                                         .foregroundColor(.gray)
                                     
-                                    CustomSlider(value: $inactivityTime, range: 5...30)
+                                    CustomSlider(value: $inactivityTime, range: 5...30, style: .thin)
+                                        .padding(.horizontal, 30)
                                     
                                     HStack {
                                         Text("05")
@@ -747,7 +757,7 @@ struct ConfigView: View {
                                      .frame(width: geo.size.width * 0.25)
                             }
                         }
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 5)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -779,18 +789,19 @@ struct ConfigSection<Content: View>: View {
                     Image("btn_expand_interactive")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 20)
-                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                        .frame(width: 20, height: 20)
                 }
                 .padding()
                 .background(Color(red: 26/255, green: 60/255, blue: 104/255))
             }
             .buttonStyle(PlainButtonStyle())
+            .padding(.bottom, isExpanded ? 8 : 0) // Espaço entre o título e o card
             
             if isExpanded {
                 VStack {
                     content()
                 }
+                .padding(.top, 10)
                 .background(Color(red: 245/255, green: 245/255, blue: 245/255))
                 .transition(.asymmetric(
                     insertion: .opacity.combined(with: .move(edge: .top)),
@@ -813,7 +824,7 @@ struct ConfigToggle: View {
             Image(icon)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 25)
+                .frame(width: 20)
             
             VStack(alignment: .leading, spacing: 5) {
                 Text("• \(title)")
@@ -844,9 +855,10 @@ struct ConfigToggle: View {
                         )
 
                     if isOn {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(Color("azulEscuro"))
+                        Image("icone_check")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
                     }
                 }
             }
@@ -860,37 +872,64 @@ struct ConfigToggle: View {
 struct CustomSlider: View {
     @Binding var value: Double
     var range: ClosedRange<Double>
+    var style: SliderStyle = .thick
     var onEnded: (() -> Void)? = nil
+    
+    enum SliderStyle {
+        case thick
+        case thin
+    }
     
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
+                // Track
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
-                    .frame(height: 12)
-                    .cornerRadius(6)
+                    .frame(height: style == .thick ? 24 : 4)
+                    .cornerRadius(style == .thick ? 4 : 2)
                 
-                Rectangle()
-                    .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
-                    .frame(width: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width, height: 12)
-                    .cornerRadius(6)
+                // Progress (only for thick)
+                if style == .thick {
+                    Rectangle()
+                        .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
+                        .frame(width: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width, height: 24)
+                        .cornerRadius(4)
+                } else {
+                    // Thin progress line
+                    Rectangle()
+                        .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
+                        .frame(width: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width, height: 4)
+                        .cornerRadius(2)
+                }
                 
-                Rectangle()
-                    .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
-                    .frame(width: 14, height: 12)
-                    .offset(x: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width - 7)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { gesture in
-                                let newValue = Double(gesture.location.x / geometry.size.width) * (range.upperBound - range.lowerBound) + range.lowerBound
-                                value = max(range.lowerBound, min(range.upperBound, newValue))
-                            }
-                            .onEnded { _ in
-                                onEnded?()
-                            }
-                    )
+                // Thumb
+                if style == .thick {
+                    // Transparent handle for thick slider
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 30, height: 24)
+                        .offset(x: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width - 15)
+                } else {
+                    // Vertical marker for thin slider
+                    Rectangle()
+                        .fill(Color(red: 112/255, green: 42/255, blue: 78/255))
+                        .frame(width: 4, height: 16)
+                        .offset(x: CGFloat((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * geometry.size.width - 2)
+                }
             }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        let newValue = Double(gesture.location.x / geometry.size.width) * (range.upperBound - range.lowerBound) + range.lowerBound
+                        value = max(range.lowerBound, min(range.upperBound, newValue))
+                    }
+                    .onEnded { _ in
+                        onEnded?()
+                    }
+            )
         }
-        .frame(height: 14)
+        .frame(height: style == .thick ? 24 : 20)
     }
 }

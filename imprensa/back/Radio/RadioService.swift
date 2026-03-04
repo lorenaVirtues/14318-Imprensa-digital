@@ -31,9 +31,11 @@ func makeStreamingUserAgent() -> String {
 struct RadioModel: Codable, Identifiable {
     let id = UUID()
     public var streamUrl: String
+    public var redundanciaUrl: String?
     
     enum CodingKeys: String, CodingKey {
         case streamUrl = "url"
+        case redundanciaUrl = "redundancia"
     }
 }
 
@@ -90,6 +92,9 @@ class RadioPlayer: NSObject, ObservableObject {
     }
     
     let streamingURL: URL
+    var redundancyURL: URL?
+    private var isPlayingRedundancy = false
+    
     var player: AVPlayer?
     private var playerItem: AVPlayerItem?
     private var playerItemContext = 0
@@ -114,9 +119,13 @@ class RadioPlayer: NSObject, ObservableObject {
         metaOutput.setDelegate(self, queue: DispatchQueue.main)
         self.playerItem?.add(metaOutput)
         
-        // Adiciona observador inicial
+        // Adiciona observadores iniciais
+        self.playerItem?.addObserver(self, forKeyPath: "status", options: [.new, .old], context: &playerItemContext)
         self.player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: &playerItemContext)
         self.observedPlayer = self.player
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePlaybackError), name: .AVPlayerItemFailedToPlayToEndTime, object: playerItem)
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePlaybackError), name: .AVPlayerItemPlaybackStalled, object: playerItem)
         
         updateRouteName()
         NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange), name: AVAudioSession.routeChangeNotification, object: nil)
@@ -126,6 +135,9 @@ class RadioPlayer: NSObject, ObservableObject {
         if let p = observedPlayer {
             p.removeObserver(self, forKeyPath: "timeControlStatus", context: &playerItemContext)
         }
+        if let item = playerItem {
+            item.removeObserver(self, forKeyPath: "status", context: &playerItemContext)
+        }
         NotificationCenter.default.removeObserver(self)
         NetworkReachability.shared.reachabilityObserver = nil
     }
@@ -134,8 +146,8 @@ class RadioPlayer: NSObject, ObservableObject {
     private static func makePlayerItem(with url: URL) -> AVPlayerItem {
         let headers = ["User-Agent": makeStreamingUserAgent()]
         let options: [String: Any] = [
-            // Chave interna usada pelo AVURLAsset para enviar headers HTTP
-            "AVURLAssetHTTPHeaderFieldsKey": headers
+            "AVURLAssetHTTPHeaderFieldsKey": headers,
+            "AVURLAssetPreferPreciseDurationAndTimingKey": true
         ]
         let asset = AVURLAsset(url: url, options: options)
         return AVPlayerItem(asset: asset)
@@ -149,21 +161,40 @@ class RadioPlayer: NSObject, ObservableObject {
         player?.volume = volume
     }
     
-    func initPlayer(url: URL) {
-        // Se já temos um player com essa URL e ele está tocando, não reinicia
-        if let currentURL = (player?.currentItem?.asset as? AVURLAsset)?.url, currentURL == url {
-            if player?.timeControlStatus == .playing { return }
+    func initPlayer(url: URL, redundancy: URL? = nil, isFallback: Bool = false) {
+        // Se for fallback, não sobrescreve a flag de redundância
+        if !isFallback {
+            self.redundancyURL = redundancy
+            self.isPlayingRedundancy = false
+        }
+
+        print("🎵 [RadioPlayer] Iniciando Player - Principal: \(url.absoluteString)")
+        if let redundancy = redundancy {
+            print("🎵 [RadioPlayer] Redundância configurada: \(redundancy.absoluteString)")
         }
 
         self.isLoading = true
                 
+        // Limpa observadores antigos do item
+        if let oldItem = playerItem {
+            oldItem.removeObserver(self, forKeyPath: "status")
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemFailedToPlayToEndTime, object: oldItem)
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemPlaybackStalled, object: oldItem)
+        }
+
         playerItem = RadioPlayer.makePlayerItem(with: url)
+        
+        // Adiciona observadores ao novo item
+        playerItem?.addObserver(self, forKeyPath: "status", options: [.new, .old], context: &playerItemContext)
         
         let metaOutput = AVPlayerItemMetadataOutput(identifiers: nil)
         metaOutput.setDelegate(self, queue: DispatchQueue.main)
         playerItem?.add(metaOutput)
         
-        // Remove observador antigo se existir de forma segura
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePlaybackError), name: .AVPlayerItemFailedToPlayToEndTime, object: playerItem)
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePlaybackError), name: .AVPlayerItemPlaybackStalled, object: playerItem)
+        
+        // Remove observador antigo do player
         if let oldPlayer = observedPlayer {
             oldPlayer.removeObserver(self, forKeyPath: "timeControlStatus", context: &playerItemContext)
             observedPlayer = nil
@@ -172,10 +203,31 @@ class RadioPlayer: NSObject, ObservableObject {
         player = AVPlayer(playerItem: playerItem)
         player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: &playerItemContext)
         observedPlayer = player
+        
         setupNotifications()
         setupNowPlayingInfo(with: artwork)
         reachabilityObserver()
         setDefaultAlbumArtwork()
+    }
+    
+    @objc private func handlePlaybackError() {
+        print("❌ Erro ou Estol detectado no streaming atual.")
+        fallbackToRedundancy()
+    }
+
+    private func fallbackToRedundancy() {
+        guard !isPlayingRedundancy, let redundancy = redundancyURL else { 
+            print("⚠️ Redundância ignorada: Já em uso ou link inexistente.")
+            return 
+        }
+        
+        print("🔄 TROCANDO PARA REDUNDÂNCIA: \(redundancy.absoluteString)")
+        self.isPlayingRedundancy = true
+        
+        DispatchQueue.main.async {
+            self.initPlayer(url: redundancy, isFallback: true)
+            self.player?.play()
+        }
     }
     
     /// Observa as mudanças no status do player (tocar/loading)
@@ -188,18 +240,25 @@ class RadioPlayer: NSObject, ObservableObject {
             return
         }
         DispatchQueue.main.async {
-            switch self.player?.timeControlStatus {
-            case .playing:
-                self.isPlaying = true
-                self.isLoading = false
-            case .waitingToPlayAtSpecifiedRate:
-                self.isPlaying = false
-                self.isLoading = true
-            case .paused:
-                self.isPlaying = false
-                self.isLoading = false
-            default:
-                break
+            if keyPath == "timeControlStatus" {
+                switch self.player?.timeControlStatus {
+                case .playing:
+                    self.isPlaying = true
+                    self.isLoading = false
+                case .waitingToPlayAtSpecifiedRate:
+                    self.isPlaying = false
+                    self.isLoading = true
+                case .paused:
+                    self.isPlaying = false
+                    self.isLoading = false
+                default:
+                    break
+                }
+            } else if keyPath == "status" {
+                if self.playerItem?.status == .failed {
+                    print("❌ Player Item FALHOU")
+                    self.fallbackToRedundancy()
+                }
             }
         }
     }
@@ -298,7 +357,8 @@ class RadioPlayer: NSObject, ObservableObject {
             } else {
                 self.currentRadio = radio
                 if let url = URL(string: radio.streamUrl) {
-                    initPlayer(url: url)
+                    let redundancy = URL(string: radio.redundanciaUrl ?? "")
+                    initPlayer(url: url, redundancy: redundancy)
                     play(radio)
                 }
             }

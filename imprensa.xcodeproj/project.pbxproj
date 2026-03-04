@@ -367,6 +367,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = imprensa/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Imprensa Digital";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O app precisa acessar a rede local para conectar ao Google Cast.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
@@ -385,7 +386,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -409,6 +410,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = imprensa/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Imprensa Digital";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O app precisa acessar a rede local para conectar ao Google Cast.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Usamos sua localização para mostrar conteúdos e informações relevantes da sua região.";
@@ -427,7 +429,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.app.imprensa;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
